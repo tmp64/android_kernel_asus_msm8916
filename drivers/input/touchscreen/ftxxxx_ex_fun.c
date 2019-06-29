@@ -1,7 +1,7 @@
-/* 
+/*
 * drivers/input/touchscreen/ftxxxx_ex_fun.c
 *
-* FocalTech ftxxxx expand function for debug. 
+* FocalTech ftxxxx expand function for debug.
 *
 * Copyright (c) 2014  Focaltech Ltd.
 *
@@ -26,92 +26,24 @@
 #include <linux/netdevice.h>
 #include <linux/unistd.h>
 #include <linux/proc_fs.h>
+#include <linux/vmalloc.h>
+#include <linux/asus_lcd_id.h>
 
-
-
-#ifdef ZE550KL_HD
-static unsigned char CTPM_FW_ZE550KL_GIS_TM[] = {
-	#include "ASUS_ZE550KL_5446_0x61_0xB1_20150914_app.cfg"
+static unsigned char TM_FW[] = {
+#include "ASUS_ZE500KL_TM_app.i"
 };
-static unsigned char CTPM_FW_ZE550KL_GIS_CPT[] = {
-	#include "ASUS_ZE550KL_5446_0x62_0xB0_20150914_app.cfg"
+static unsigned char GIS_AUO_FW[] = {
+#include "ASUS_ZE500KL_GIS_AUO_app.i"
 };
-
-static unsigned char CTPM_FW_ZE550KL_TPK_TM[] = {
-	#include "ASUS_ZE550KL_5446_0x51_0xB1_20150914_app.cfg"
+static unsigned char GIS_BOE_FW[] = {
+#include "ASUS_ZE500KL_GIS_BOE_app.i"
 };
-static unsigned char CTPM_FW_ZE550KL_TPK_CPT[] = {
-	#include "ASUS_ZE550KL_5446_0x52_0xB0_20150914_app.cfg"
+static unsigned char TOT_AUO_FW[] = {
+#include "ASUS_ZE500KL_TOT_AUO_app.i"
 };
-#endif
-#ifdef ZE551KL_FHD
-static unsigned char CTPM_FW_ZE551KL_GIS_TM[] = {
-	#include "ASUS_ZE551KL_5446_0x61_0xA4_20150914_app.cfg"
+static unsigned char TOT_BOE_FW[] = {
+#include "ASUS_ZE500KL_TOT_BOE_app.i"
 };
-static unsigned char CTPM_FW_ZE551KL_GIS_AUO[] = {
-	#include "ASUS_ZE551KL_5446_0x63_0xA3_20150914_app.cfg"
-};
-
-static unsigned char CTPM_FW_ZE551KL_TPK_TM[] = {
-	#include "ASUS_ZE551KL_5446_0x51_0xA4_20150914_app.cfg"
-};
-static unsigned char CTPM_FW_ZE551KL_TPK_AUO[] = {
-	#include "ASUS_ZE551KL_5446_0x53_0xA3_20150914_app.cfg"
-};
-#endif
-
-static unsigned char CTPM_FW_ZX550KL[] = {
-	//#include "ASUS_5446_ZX550KL_0x01_20150209_app.cfg"
-	
-	#include "FT5446_ZX550KL_JT_TM_V22_D6f_20150216_app.cfg"
-};
-//asus_jeffery_hsu+++
-static unsigned char CTPM_FW_ZD550KL_GIS_TM[] = {
-	#include "ASUS_ZD551KL_5446_0x61_0xB8_20151020_app.cfg"
-};
-static unsigned char CTPM_FW_ZD550KL_GIS_AUO[] = {
-	#include "ASUS_ZD551KL_5446_0x63_0xB9_20151028_app.cfg"
-};
-static unsigned char CTPM_FW_ZD550KL_Jtouch_TM[] = {
-	#include "ASUS_ZD551KL_5446_0x81_0xB8_20151020_app.cfg"
-};
-static unsigned char CTPM_FW_ZD550KL_Jtouch_AUO[] = {
-	#include "ASUS_ZD551KL_5446_0x83_0xB7_20151020_app.cfg"
-};
-//asus_jeffery_hsu---
-//<asus-Jeffery20150323+>
-#ifdef ZE600KL_HD
-static unsigned char CTPM_FW_ZE600KL_CPT_TPK[] = {
-	#include "ASUS_ZE600KL_5446_0x52_0x25_20150709_app.cfg"
-};
-static unsigned char CTPM_FW_ZE600KL_CPT_JTOUCH[] = {
-	#include "ASUS_ZE600KL_5446_0x82_0xA1_20151124_app.cfg"
-};
-static unsigned char CTPM_FW_ZE600KL_IVO_TPK[] = {
-	#include "ASUS_ZE600KL_5446_0x57_0x04_20150525_app.cfg"
-};
-static unsigned char CTPM_FW_ZE600KL_IVO_JTOUCH[] = {
-	#include "ASUS_ZE600KL_5446_0x87_0x05_20150525_app.cfg"
-};
-#endif
-#ifdef ZE601KL_FHD
-static unsigned char CTPM_FW_ZE601KL_TPK[] = {
-	#include "ASUS_ZE601KL_5446_0x53_0xA3_20151230_app.cfg"
-};
-static unsigned char CTPM_FW_ZE601KL_JTOUCH[] = {
-	#include "ASUS_ZE601KL_5446_0x83_0xA4_20151203_app.cfg"
-};
-static unsigned char CTPM_FW_ZE601KL_TM_TPK[] = {
-	#include "ASUS_ZE601KL_5446_0x51_0xA2_20151124_app.cfg"
-};
-static unsigned char CTPM_FW_ZE601KL_TM_JTOUCH[] = {
-	#include "ASUS_ZE601KL_5446_0x81_0xA2_20151124_app.cfg"
-};
-
-#endif
-//<asus-Jeffery20150323->
-static unsigned char *CTPM_FW = NULL;
-static int CTPM_FW_length = 0;
 
 /*ASUS_BSP Jacob : setting priority +++ */
 #ifdef ASUS_FACTORY_BUILD
@@ -136,27 +68,21 @@ extern u8 FTS_gesture_register_d2;
 extern u8 FTS_gesture_register_d5;
 extern u8 FTS_gesture_register_d6;
 extern u8 FTS_gesture_register_d7;
-extern u32 selftestflag;
+extern u8 g_vendor_id;
 
+extern bool ReConfigDoubleTap;
+extern u8 g_touch_slop;
+extern u8 g_touch_distance;
+extern u8 g_time_gap;
+extern u8 g_int_time;
 
-static u8 fw_update_complete;
+extern bool EnableProximityCheck;
+
+static bool fw_update_complete;
 static int fw_update_progress;
 static int fw_update_total_count = 100;
 
-//--ZE600KL regonize LCM & TP <asus-Jeffery20150604+>
-static int LCM_TP_Vendor=0; 
-enum{
-	TM_TPK=51,
-	CPT_TPK=52,
-	AUO_TPK=53,
-	IVO_TPK=57,
-	TM_Jtouch=81,
-	CPT_Jtouch=82,
-	AUO_Jtouch=83,
-	IVO_Jtouch=87
-};
-//<asus-Jeffery20150604+>
-
+static int fw_size = 0;
 
 static struct kobject *android_touch_kobj;		/* Sys kobject variable*/
 
@@ -184,11 +110,6 @@ int SCab_7;
 int SCab_8;
 static int TP_TEST_RESULT;
 #endif
-
-//<Jeffery20151202++>
-bool keyboard_enable=false; 
-//<Jeffery20151202-->
-
 /*zax 20141116 -------------------*/
 int HidI2c_To_StdI2c(struct i2c_client *client)
 {
@@ -205,15 +126,16 @@ int HidI2c_To_StdI2c(struct i2c_client *client)
 
 	msleep(10);
 	iRet = ftxxxx_i2c_Read(client, auc_i2c_write_buf, 0, reg_val, 3);
-//	FTS_DBG("[Touch] %s : Change to STDI2cValue,REG1 = 0x%x,REG2 = 0x%x,REG3 = 0x%x, iRet=%d\n", __func__, reg_val[0], reg_val[1], reg_val[2], iRet);
+	FTS_DBG("[Touch] %s : Change to STDI2cValue,REG1 = 0x%x,REG2 = 0x%x,REG3 = 0x%x, iRet=%d\n", __func__, reg_val[0], reg_val[1], reg_val[2], iRet);
 
-	//if (reg_val[0] == 0xEB && reg_val[1] == 0xAA && reg_val[2] == 0x08) {
-	//	printk("[Focal][Touch] %s : HidI2c_To_StdI2c successful. \n", __func__);
+	if (reg_val[0] == 0xEB && reg_val[1] == 0xAA && reg_val[2] == 0x08) {
+		printk("[Focal][Touch] %s : HidI2c_To_StdI2c successful. \n", __func__);
 		iRet = 1;
-	//} else {
-	//	printk("[Focal][TOUCH_ERR] %s : HidI2c_To_StdI2c error. \n", __func__);
-	//	iRet = 0;
-	//}
+	} else {
+		printk("[Focal][TOUCH_ERR] %s : HidI2c_To_StdI2c error. \n", __func__);
+		iRet = 0;
+	}
+
 	return iRet;
 }
 
@@ -227,7 +149,7 @@ struct Upgrade_Info{
 
 struct Upgrade_Info upgradeinfo;
 struct i2c_client *G_Client;
-//write regvalue to the address regaddr
+
 int ftxxxx_write_reg(struct i2c_client *client, u8 regaddr, u8 regvalue)
 {
 	unsigned char buf[2] = {0};
@@ -236,7 +158,7 @@ int ftxxxx_write_reg(struct i2c_client *client, u8 regaddr, u8 regvalue)
 
 	return ftxxxx_i2c_Write(client, buf, sizeof(buf));
 }
-//read data from the address regaddr and save it in regvalue
+
 int ftxxxx_read_reg(struct i2c_client *client, u8 regaddr, u8 *regvalue)
 {
 	return ftxxxx_i2c_Read(client, &regaddr, 1, regvalue, 1);
@@ -259,34 +181,7 @@ int FTS_I2c_Write(unsigned char *wBuf, int wLen)
 
 	return ftxxxx_i2c_Write(G_Client, wBuf, wLen);
 }
-/**********************add by jinpeng_he to get the fw version*********************/
-void ftxxxx_update_fw_ver(struct ftxxxx_ts_data *data)
-{
-	struct i2c_client *client = data->client;
-	u8 reg_addr;
-	int err;
 
-	reg_addr = FT_REG_FW_VER;
-	err = ftxxxx_i2c_Read(client, &reg_addr, 1, &data->fw_ver[0], 1);
-	if (err < 0)
-		dev_err(&client->dev, "fw major version read failed");
-
-	reg_addr = FT_REG_FW_MIN_VER;
-	err = ftxxxx_i2c_Read(client, &reg_addr, 1, &data->fw_ver[1], 1);
-	if (err < 0)
-		dev_err(&client->dev, "fw minor version read failed");
-
-	reg_addr = FT_REG_FW_SUB_MIN_VER;
-	err = ftxxxx_i2c_Read(client, &reg_addr, 1, &data->fw_ver[2], 1);
-	if (err < 0)
-		dev_err(&client->dev, "fw sub minor version read failed");
-
-	dev_info(&client->dev, "Firmware version = 0x%x.0x%x.0x%x\n",
-		data->fw_ver[0], data->fw_ver[1], data->fw_ver[2]);
-//	printk(KERN_WARNING"hjptest--->Firmware version = %d.%d.%d\n",
-//		data->fw_ver[0], data->fw_ver[1], data->fw_ver[2]);
-}
-/***********************************************/
 int fts_ctpm_auto_clb(struct i2c_client *client)
 {
 	unsigned char uc_temp;
@@ -322,194 +217,23 @@ int fts_ctpm_auto_clb(struct i2c_client *client)
 /*
 upgrade with *.i file
 */
-int fts_ctpm_fw_upgrade_with_i_file(struct i2c_client *client)
+int fts_ctpm_fw_upgrade_with_i_file(struct i2c_client *client, u8 *fw_buf)
 {
 	u8 *pbt_buf = NULL;
 	int i_ret;
-	int fw_len;
-		switch (asus_PRJ_ID) {
-		//<asus-Jeffery20150323+>
-		case ASUS_ZE600KL:
-			#ifdef ZE600KL_HD
-			if(ftxxxx_ts->tp_id_value2==0){	//gpio74 TPK
-				if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_CPT_HD_ZE600KL){	//cpt
-					CTPM_FW = CTPM_FW_ZE600KL_CPT_TPK;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE600KL_CPT_TPK);
-					LCM_TP_Vendor = CPT_TPK;
-					printk(KERN_WARNING"[Focal] LCM+TP = CPT+TPK\n");
-				}
-				else{	//ivo
-					CTPM_FW = CTPM_FW_ZE600KL_IVO_TPK;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE600KL_IVO_TPK);
-					LCM_TP_Vendor = IVO_TPK;
-					printk(KERN_WARNING"[Focal] LCM+TP = IVO+TPK\n");
-				}
-			}
-			else{
-				if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_CPT_HD_ZE600KL){	//cpt
-					CTPM_FW = CTPM_FW_ZE600KL_CPT_JTOUCH;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE600KL_CPT_JTOUCH);
-					LCM_TP_Vendor = CPT_Jtouch;
-					printk(KERN_WARNING"[Focal] LCM+TP = CPT+JTouch\n");
-				}
-				else{	//ivo
-					CTPM_FW = CTPM_FW_ZE600KL_IVO_JTOUCH;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE600KL_IVO_JTOUCH);
-					LCM_TP_Vendor = IVO_Jtouch;
-					printk(KERN_WARNING"[Focal] LCM+TP = IVO+JTouch\n");
-				}
-			}
-			printk(KERN_WARNING"[Focal] current proj is ZE600KL\n");
-			#endif
-			#ifdef ZE601KL_FHD
-			if(ftxxxx_ts->tp_id_value2==0){	//gpio74
-				if(ftxxxx_ts->lcd_vendor == LCD_VENDOR_AUO_FHD_ZE600KL){ //AUO
-					CTPM_FW = CTPM_FW_ZE601KL_TPK;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE601KL_TPK);
-					LCM_TP_Vendor = AUO_TPK;
-				}else{		//TM
-					CTPM_FW = CTPM_FW_ZE601KL_TM_TPK;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE601KL_TM_TPK);
-					LCM_TP_Vendor = TM_TPK;
-				}
-			}
-			else{
-				if(ftxxxx_ts->lcd_vendor == LCD_VENDOR_AUO_FHD_ZE600KL){ //AUO
-					CTPM_FW = CTPM_FW_ZE601KL_JTOUCH;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE601KL_JTOUCH);
-					LCM_TP_Vendor = AUO_Jtouch;
-				}else{
-					CTPM_FW = CTPM_FW_ZE601KL_TM_JTOUCH;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE601KL_TM_JTOUCH);
-					LCM_TP_Vendor = TM_Jtouch;
-				}
-			}
-			printk(KERN_WARNING"[Focal] current proj is ZE601KL\n");
-			#endif
-			break;
-		//<asus-Jeffery20150323+>
-		case ASUS_ZX550KL:
-			CTPM_FW = CTPM_FW_ZX550KL;
-			CTPM_FW_length = sizeof(CTPM_FW_ZX550KL);
-			break;
-		case ASUS_ZD550KL:
-			//lcd_vendor 0x32 mapping LCD TM
-			if (ftxxxx_ts->tp_id_value1 == 0 && ftxxxx_ts->tp_id_value2 == 0) {
-				if(ftxxxx_ts->lcd_vendor==0x32)
-				{
-					CTPM_FW = CTPM_FW_ZD550KL_Jtouch_TM;
-					CTPM_FW_length = sizeof(CTPM_FW_ZD550KL_Jtouch_TM);
-					break;
-				}
-				else
-				{
-					CTPM_FW = CTPM_FW_ZD550KL_Jtouch_AUO;
-					CTPM_FW_length = sizeof(CTPM_FW_ZD550KL_Jtouch_AUO);
-					break;
-				}			
-			}
-			else if(ftxxxx_ts->tp_id_value1 == 0 && ftxxxx_ts->tp_id_value2 == 1) {				
-				if(ftxxxx_ts->lcd_vendor==0x32)
-				{
-					CTPM_FW = CTPM_FW_ZD550KL_GIS_TM;
-					CTPM_FW_length = sizeof(CTPM_FW_ZD550KL_GIS_TM);
-					break;
-				}
-				else
-				{
-					CTPM_FW = CTPM_FW_ZD550KL_GIS_AUO;
-					CTPM_FW_length = sizeof(CTPM_FW_ZD550KL_GIS_AUO);
-					break;
-				}	
-			}
-			break;	
-		case ASUS_ZE550KL:
-		default:
-			#ifdef ZE550KL_HD
-			if(ftxxxx_ts->tp_id_value1==1&&ftxxxx_ts->tp_id_value2==1)
-			{	
-				if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_TM_HD)
-				{
-					CTPM_FW = CTPM_FW_ZE550KL_TPK_TM;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE550KL_TPK_TM);
-					break;
-				}
-				else if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_CPT_HD)
-				{
-					CTPM_FW = CTPM_FW_ZE550KL_TPK_CPT;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE550KL_TPK_CPT);
-					break;
-				}
-				
-			}
-			else if(ftxxxx_ts->tp_id_value1==0&&ftxxxx_ts->tp_id_value2==0)
-			{
-				if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_TM_HD)
-				{
-					CTPM_FW = CTPM_FW_ZE550KL_GIS_TM;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE550KL_GIS_TM);
-					break;
-				}
-				else if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_CPT_HD)
-				{
-					CTPM_FW = CTPM_FW_ZE550KL_GIS_CPT;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE550KL_GIS_CPT);
-					break;
-				}
-				
-			}
-			#endif
-			#ifdef ZE551KL_FHD
-			if(ftxxxx_ts->tp_id_value1==1&&ftxxxx_ts->tp_id_value2==1)
-			{	
-				if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_TM_FHD)
-				{
-					CTPM_FW = CTPM_FW_ZE551KL_TPK_TM;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE551KL_TPK_TM);
-					break;
-				}
-				else if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_AUO_FHD)
-				{
-					CTPM_FW = CTPM_FW_ZE551KL_TPK_AUO;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE551KL_TPK_AUO);
-					break;
-				}
-				
-			}
-			if(ftxxxx_ts->tp_id_value1==0&&ftxxxx_ts->tp_id_value2==0)
-			{
-				if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_TM_FHD)
-				{
-					CTPM_FW = CTPM_FW_ZE551KL_GIS_TM;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE551KL_GIS_TM);
-					break;
-				}
-				else if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_AUO_FHD)
-				{
-					CTPM_FW = CTPM_FW_ZE551KL_GIS_AUO;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE551KL_GIS_AUO);
-					break;
-				}
-				
-			}
-			#endif
-
-			break;
-	}
-	fw_len = CTPM_FW_length;
 
 	/*judge the fw that will be upgraded
 	* if illegal, then stop upgrade and return.
 	*/
-	if (fw_len < 8 || fw_len > 54*1024) {
+	if (fw_size < 8 || fw_size > 54*1024) {
 		printk("[Focal][TOUCH_ERR] %s : FW length error \n", __func__);
 		return -EIO;
 	}
 
 	/*FW upgrade*/
-	pbt_buf = CTPM_FW;
+	pbt_buf = fw_buf;
 	/*call the upgrade function*/
-	i_ret = fts_ctpm_fw_upgrade(client, pbt_buf, fw_len);
+	i_ret = fts_ctpm_fw_upgrade(client, pbt_buf, fw_size);
 	if (i_ret != 0) {
 		dev_err(&client->dev, "[Focal][TOUCH_ERR] %s : upgrade failed. err=%d.\n", __func__, i_ret);
 	} else {
@@ -520,242 +244,43 @@ int fts_ctpm_fw_upgrade_with_i_file(struct i2c_client *client)
 	return i_ret;
 }
 
-u8 fts_ctpm_get_i_file_ver(void)
+u8 fts_ctpm_get_i_file_ver(u8 *fw_buf)
 {
-	u16 ui_sz;
-	ui_sz = CTPM_FW_length;
-	if (ui_sz > 2) {
-		return CTPM_FW[ui_sz - 2];
-	} else {
-		return 0x00;	/*default value*/
-	}
-}
-u8 fts_ctpm_get_i_file_vendor(void)
-{
-	u16 ui_sz;
-	ui_sz = CTPM_FW_length;
-	if (ui_sz > 2) {
-		return CTPM_FW[ui_sz - 1];
+	printk("[Focal][Touch] %s : Update FW size = %d \n", __func__, fw_size);
+	if (fw_size > 2) {
+		return fw_buf[fw_size - 2];
 	} else {
 		return 0x00;	/*default value*/
 	}
 }
 
-int fts_ctpm_auto_upgrade(struct i2c_client *client)
+int fts_ctpm_auto_upgrade(struct i2c_client *client, u8 *fw_buf)
 {
 	u8 uc_host_fm_ver = FTXXXX_REG_FW_VER;
 	u8 uc_tp_fm_ver;
-	u8 uc_host_project_id;
-	u8 uc_host_fm_vendor;
-	u8 uc_tp_project_id;
-	u8 uc_tp_fm_vendor;
 	int i_ret;
 
-	switch (asus_PRJ_ID) {
-		//<asus-Jeffery20150323+>
-		case ASUS_ZE600KL:			
-			#ifdef ZE600KL_HD
-			uc_host_project_id = ZE600KL;
-			if(ftxxxx_ts->tp_id_value2==0){	//gpio74 TPK
-				if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_CPT_HD_ZE600KL){	//cpt
-					CTPM_FW = CTPM_FW_ZE600KL_CPT_TPK;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE600KL_CPT_TPK);
-					LCM_TP_Vendor = CPT_TPK;
-					printk(KERN_WARNING"[Focal] LCM+TP = CPT+TPK\n");
-				}
-				else{	//ivo
-					CTPM_FW = CTPM_FW_ZE600KL_IVO_TPK;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE600KL_IVO_TPK);
-					LCM_TP_Vendor = IVO_TPK;
-					printk(KERN_WARNING"[Focal] LCM+TP = IVO+TPK\n");
-				}
-			}
-			else{
-				if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_CPT_HD_ZE600KL){	//cpt
-					CTPM_FW = CTPM_FW_ZE600KL_CPT_JTOUCH;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE600KL_CPT_JTOUCH);
-					LCM_TP_Vendor = CPT_Jtouch;
-					printk(KERN_WARNING"[Focal] LCM+TP = CPT+JTouch\n");
-				}
-				else{	//ivo
-					CTPM_FW = CTPM_FW_ZE600KL_IVO_JTOUCH;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE600KL_IVO_JTOUCH);
-					LCM_TP_Vendor = IVO_Jtouch;
-					printk(KERN_WARNING"[Focal] LCM+TP = IVO+JTouch\n");
-				}
-			}
-			printk(KERN_WARNING"[Focal][Touch] current proj is ZE600KL\n");
-			#endif
-			#ifdef ZE601KL_FHD
-			uc_host_project_id = ZE601KL;
-			if(ftxxxx_ts->tp_id_value2==0){	//gpio74
-				if(ftxxxx_ts->lcd_vendor == LCD_VENDOR_AUO_FHD_ZE600KL){ //AUO
-					CTPM_FW = CTPM_FW_ZE601KL_TPK;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE601KL_TPK);
-					LCM_TP_Vendor = AUO_TPK;
-				}else{		//TM
-					CTPM_FW = CTPM_FW_ZE601KL_TM_TPK;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE601KL_TM_TPK);
-					LCM_TP_Vendor = TM_TPK;
-				}
-			}
-			else{
-				if(ftxxxx_ts->lcd_vendor == LCD_VENDOR_AUO_FHD_ZE600KL){ //AUO
-					CTPM_FW = CTPM_FW_ZE601KL_JTOUCH;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE601KL_JTOUCH);
-					LCM_TP_Vendor = AUO_Jtouch;
-				}else{
-					CTPM_FW = CTPM_FW_ZE601KL_TM_JTOUCH;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE601KL_TM_JTOUCH);
-					LCM_TP_Vendor = TM_Jtouch;
-				}
-			}
-			printk(KERN_WARNING"[Focal][Touch] current proj is ZE601KL\n");
-			#endif
-			printk(KERN_WARNING "[Focal][Touch] tp_id_value2 = %x\n",ftxxxx_ts->tp_id_value2);			
-			break;
-		//<asus-Jeffery20150323+>
-		case ASUS_ZX550KL:
-			CTPM_FW = CTPM_FW_ZX550KL;
-			CTPM_FW_length = sizeof(CTPM_FW_ZX550KL);
-			uc_host_project_id=ZX550KL;
-			printk(KERN_WARNING"the current board is ZX550KL\n");
-			break;
-		case ASUS_ZD550KL:
-			uc_host_project_id=ZD550KL;
-			if (ftxxxx_ts->tp_id_value1 == 0 && ftxxxx_ts->tp_id_value2 == 0) {
-				if(ftxxxx_ts->lcd_vendor==0x32)
-				{
-					CTPM_FW = CTPM_FW_ZD550KL_Jtouch_TM;
-					CTPM_FW_length = sizeof(CTPM_FW_ZD550KL_Jtouch_TM);
-					break;
-				}
-				else
-				{
-					CTPM_FW = CTPM_FW_ZD550KL_Jtouch_AUO;
-					CTPM_FW_length = sizeof(CTPM_FW_ZD550KL_Jtouch_AUO);
-					break;
-				}						
-			}
-			else if(ftxxxx_ts->tp_id_value1 == 0 && ftxxxx_ts->tp_id_value2 == 1) {				
-				if(ftxxxx_ts->lcd_vendor==0x32)
-				{
-					CTPM_FW = CTPM_FW_ZD550KL_GIS_TM;
-					CTPM_FW_length = sizeof(CTPM_FW_ZD550KL_GIS_TM);
-					break;
-				}
-				else
-				{
-					CTPM_FW = CTPM_FW_ZD550KL_GIS_AUO;
-					CTPM_FW_length = sizeof(CTPM_FW_ZD550KL_GIS_AUO);
-					break;
-				}
-			}
-			break;	
-		case ASUS_ZE550KL:
-		default:
-			#ifdef ZE550KL_HD
-			uc_host_project_id=ZE550KL;
-			if(ftxxxx_ts->tp_id_value1==1&&ftxxxx_ts->tp_id_value2==1)
-			{
-				if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_TM_HD)
-				{
-					CTPM_FW = CTPM_FW_ZE550KL_TPK_TM;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE550KL_TPK_TM);
-//					printk(KERN_WARNING"hjptest--->the current board is ZE550KL touch glass is TPK LCM is TM the file version is %d\n",CTPM_FW_ZE550KL_TPK_TM[CTPM_FW_length-2]);
-					break;
-				}
-				else if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_CPT_HD)
-				{
-					CTPM_FW = CTPM_FW_ZE550KL_TPK_CPT;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE550KL_TPK_CPT);
-//					printk(KERN_WARNING"hjptest--->the current board is ZE550KL touch glass is TPK LCM is CPT the file version is %d\n",CTPM_FW_ZE550KL_TPK_CPT[CTPM_FW_length-2]);
-					break;
-				}
-			}
-			else if(ftxxxx_ts->tp_id_value1==0&&ftxxxx_ts->tp_id_value2==0)
-			{
-				if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_TM_HD)
-				{
-					CTPM_FW = CTPM_FW_ZE550KL_GIS_TM;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE550KL_GIS_TM);
-//					printk(KERN_WARNING"hjptest--->the current board is ZE550KL touch glass is GIS LCM is TM the file version is %d\n",CTPM_FW_ZE550KL_GIS_TM[CTPM_FW_length-2]);
-					break;
-				}
-				else if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_CPT_HD)
-				{
-					CTPM_FW = CTPM_FW_ZE550KL_GIS_CPT;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE550KL_GIS_CPT);
-//					printk(KERN_WARNING"hjptest--->the current board is ZE550KL touch glass is GIS LCM is CPT the file version is %d\n",CTPM_FW_ZE550KL_GIS_CPT[CTPM_FW_length-2]);
-					break;
-				}
-			}
-			#endif
-			#ifdef ZE551KL_FHD
-			uc_host_project_id=ZE551KL;
-			if(ftxxxx_ts->tp_id_value1==1&&ftxxxx_ts->tp_id_value2==1)
-			{
-				if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_TM_FHD)
-				{
-					CTPM_FW = CTPM_FW_ZE551KL_TPK_TM;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE551KL_TPK_TM);
-//					printk(KERN_WARNING"hjptest--->the current board is ZE550KL touch glass is TPK LCM is TM the file version is %d\n",CTPM_FW_ZE551KL_TPK_TM[CTPM_FW_length-2]);
-					break;
-				}
-				else if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_AUO_FHD)
-				{
-					CTPM_FW = CTPM_FW_ZE551KL_TPK_AUO;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE551KL_TPK_AUO);
-//					printk(KERN_WARNING"hjptest--->the current board is ZE550KL touch glass is TPK LCM is CPT the file version is %d\n",CTPM_FW_ZE551KL_TPK_CPT[CTPM_FW_length-2]);
-					break;
-				}
-			}
-			else if(ftxxxx_ts->tp_id_value1==0&&ftxxxx_ts->tp_id_value2==0)
-			{
-				if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_TM_FHD)
-				{
-					CTPM_FW = CTPM_FW_ZE551KL_GIS_TM;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE551KL_GIS_TM);
-//					printk(KERN_WARNING"hjptest--->the current board is ZE550KL touch glass is GIS LCM is TM the file version is %d\n",CTPM_FW_ZE551KL_GIS_TM[CTPM_FW_length-2]);
-					break;
-				}
-				else if(ftxxxx_ts->lcd_vendor==LCD_VENDOR_AUO_FHD)
-				{
-					CTPM_FW = CTPM_FW_ZE551KL_GIS_AUO;
-					CTPM_FW_length = sizeof(CTPM_FW_ZE551KL_GIS_AUO);
-//					printk(KERN_WARNING"hjptest--->the current board is ZE550KL touch glass is GIS LCM is CPT the file version is %d\n",CTPM_FW_ZE551KL_GIS_CPT[CTPM_FW_length-2]);
-					break;
-				}
-			}
-			#endif
-
-			break;
-	}
-//	printk(KERN_WARNING"hjptest--->here will judge wether to update the firmware\n");
 	ftxxxx_read_reg(client, FTXXXX_REG_FW_VER, &uc_tp_fm_ver);
-	uc_host_fm_ver = fts_ctpm_get_i_file_ver();
-	ftxxxx_read_reg(client,FTXXXX_REG_VENDOR_ID,&uc_tp_fm_vendor);
-	uc_host_fm_vendor=fts_ctpm_get_i_file_vendor();
-	ftxxxx_read_reg(client,FTXXXX_REG_PROJECT_ID,&uc_tp_project_id);
-//	printk("hjptest---code project id =0x%x\n",uc_tp_project_id);
-//	printk("hjptest---firmware project id =0x%x\n",uc_tp_project_id);
+	uc_host_fm_ver = fts_ctpm_get_i_file_ver(fw_buf);
+	printk("[Focal][Touch] %s : uc_tp_fm_ver = 0x%x, uc_host_fm_ver = 0x%x \n", __func__, uc_tp_fm_ver, uc_host_fm_ver);
+
 	if (uc_tp_fm_ver == FTXXXX_REG_FW_VER ||	/*the firmware in touch panel maybe corrupted*/
-		uc_tp_fm_ver != uc_host_fm_ver ||/*the firmware in host flash is new, need upgrade*/
-		uc_tp_fm_vendor != uc_host_fm_vendor||
-		uc_tp_project_id!=uc_host_project_id) {
-		msleep(100);
-		printk(KERN_WARNING"upgrade in\n");
-		dev_dbg(&client->dev, "[Focal][Touch] %s : uc_tp_fm_ver = 0x%x, uc_host_fm_ver = 0x%x \n", __func__, uc_tp_fm_ver, uc_host_fm_ver);
-		i_ret = fts_ctpm_fw_upgrade_with_i_file(client);
+		uc_tp_fm_ver != uc_host_fm_ver /*the firmware in host flash is new, need upgrade*/
+		) {
+//		msleep(100);
+//		dev_dbg(&client->dev, "[Focal][Touch] %s : uc_tp_fm_ver = 0x%x, uc_host_fm_ver = 0x%x \n", __func__, uc_tp_fm_ver, uc_host_fm_ver);
+		i_ret = fts_ctpm_fw_upgrade_with_i_file(client, fw_buf);
 		if (i_ret == 0) {
 			msleep(300);
-			printk(KERN_WARNING"upgrade ok\n");
-			uc_host_fm_ver = fts_ctpm_get_i_file_ver();
-			dev_dbg(&client->dev, "[Focal][Touch] %s : upgrade to new version 0x%x \n", __func__, uc_host_fm_ver);
+			uc_host_fm_ver = fts_ctpm_get_i_file_ver(fw_buf);
+			printk("[Focal][Touch] %s : upgrade to new version 0x%x \n", __func__, uc_host_fm_ver);
 		} else {
 			dev_err(&client->dev, "[Focal][TOUCH_ERR] %s : upgrade failed ret=%d. \n", __func__, i_ret);
 			return -EIO;
 		}
+	} else {
+		printk("[Focal][Touch] %s : FW is new, no need update !\n", __func__);
+		fw_update_complete = 1;
 	}
 	return 0;
 }
@@ -1003,7 +528,7 @@ int fts_ctpm_fw_upgrade(struct i2c_client *client, u8 *pbt_buf, u32 dw_lenth)
 			bt_ecc_check ^= pbt_buf[j * FTS_PACKET_LENGTH + i];
 			bt_ecc ^= packet_buf[6 + i];
 		}
-		//printk("[Focal][Touch] %s :  bt_ecc = %x \n", __func__, bt_ecc);
+//		printk("[Focal][Touch] %s :  bt_ecc = %x \n", __func__, bt_ecc);
 		if (bt_ecc != bt_ecc_check)
 			FTS_DBG("[TOUCH_ERR] %s :  Host checksum error bt_ecc_check = %x \n", __func__, bt_ecc_check);
 		ftxxxx_i2c_Write(client, packet_buf, FTS_PACKET_LENGTH + 6);
@@ -1015,7 +540,7 @@ int fts_ctpm_fw_upgrade(struct i2c_client *client, u8 *pbt_buf, u32 dw_lenth)
 			if ((j + 0x1000) == (((reg_val[0]) << 8) | reg_val[1])) {
 				break;
 			}
-			//printk("[Focal][Touch] %s :  reg_val[0] = %x reg_val[1] = %x \n", __func__, reg_val[0], reg_val[1]);
+//			printk("[Focal][Touch] %s :  reg_val[0] = %x reg_val[1] = %x \n", __func__, reg_val[0], reg_val[1]);
 			msleep(1);
 		}
 	}
@@ -1040,11 +565,11 @@ int fts_ctpm_fw_upgrade(struct i2c_client *client, u8 *pbt_buf, u32 dw_lenth)
 			auc_i2c_write_buf[0] = 0x6a;
 			reg_val[0] = reg_val[1] = 0x00;
 			ftxxxx_i2c_Read(client, auc_i2c_write_buf, 1, reg_val, 2);
-			//printk("[Focal][Touch] %s :  reg_val[0] = %x reg_val[1] = %x \n", __func__, reg_val[0], reg_val[1]);
+			printk("[Focal][Touch] %s :  reg_val[0] = %x reg_val[1] = %x \n", __func__, reg_val[0], reg_val[1]);
 			if ((j + 0x1000) == (((reg_val[0]) << 8) | reg_val[1])) {
 				break;
 			}
-			//printk("[Focal][Touch] %s :  reg_val[0] = %x reg_val[1] = %x \n", __func__, reg_val[0], reg_val[1]);
+			printk("[Focal][Touch] %s :  reg_val[0] = %x reg_val[1] = %x \n", __func__, reg_val[0], reg_val[1]);
 			msleep(1);
 		}
 	}
@@ -1083,28 +608,16 @@ int fts_ctpm_fw_upgrade(struct i2c_client *client, u8 *pbt_buf, u32 dw_lenth)
 		return -EIO;
 	}
 	printk("[Focal][Touch] %s : checksum %X %X \n", __func__, reg_val[0], bt_ecc);
-
-
-	
 	/*********Step 7: reset the new FW***********************/
 	FTS_DBG("[Touch] %s : Step 7: reset the new FW \n", __func__);
 	auc_i2c_write_buf[0] = 0x07;
 	ftxxxx_i2c_Write(client, auc_i2c_write_buf, 1);
 	msleep(200);	/*make sure CTP startup normally */
-	if (asus_PRJ_ID == ASUS_ZD550KL) {
-		printk("[Focal][Touch] ZD550KL Hardware rst complete");
-		ftxxxx_reset_tp(0);
-        msleep(20);
-        ftxxxx_reset_tp(1);
-        msleep(80);
-	}
 	i_ret = HidI2c_To_StdI2c(client);/*Android to Std i2c.*/
 	if (i_ret == 0) {
 		FTS_DBG("[TOUCH_ERR] %s :  HidI2c change to StdI2c fail ! \n", __func__);
 	}
-	ftxxxx_update_fw_ver(ftxxxx_ts);
-	fw_update_complete++;
-	printk(KERN_WARNING"fw_update_complete=%d\n",fw_update_complete);
+	fw_update_complete = 1;
 	return 0;
 }
 
@@ -1190,7 +703,7 @@ int fts_ctpm_fw_upgrade_with_app_file(struct i2c_client *client, char *firmware_
 	u8 *pbt_buf = NULL;
 	int i_ret;
 	int fwsize = ftxxxx_GetFirmwareSize(firmware_name);
-	fw_update_complete = 3;
+	fw_update_complete = 0;
 	printk("[FTS][%s] firmware name = %s \n", __func__, firmware_name);
 	printk("[FTS][%s] firmware size = %d \n", __func__, fwsize);
 	if (fwsize <= 0) {
@@ -1202,16 +715,14 @@ int fts_ctpm_fw_upgrade_with_app_file(struct i2c_client *client, char *firmware_
 		return -EIO;
 	}
 	/*=========FW upgrade========================*/
-	pbt_buf = (unsigned char *) kmalloc(fwsize+1,GFP_ATOMIC);
+	pbt_buf = (unsigned char *) vmalloc(fwsize+1);
 	if (ftxxxx_ReadFirmware(firmware_name, pbt_buf)) {
 		dev_err(&client->dev, "%s() - ERROR: request_firmware failed\n", __FUNCTION__);
-		kfree(pbt_buf);
+		vfree(pbt_buf);
 		return -EIO;
 	}
-	printk(KERN_WARNING"fw_update_complete=%d\n",fw_update_complete);
 	/*call the upgrade function*/
 	i_ret =  fts_ctpm_fw_upgrade(client, pbt_buf, fwsize);
-	ftxxxx_update_fw_ver(ftxxxx_ts);
 	if (i_ret != 0) {
 		dev_err(&client->dev, "%s() - ERROR:[FTS] upgrade failed i_ret = %d.\n", __FUNCTION__, i_ret);
 	} else {
@@ -1219,7 +730,7 @@ int fts_ctpm_fw_upgrade_with_app_file(struct i2c_client *client, char *firmware_
 		fts_ctpm_auto_clb(client);  /*start auto CLB*/
 #endif
 	}
-	kfree(pbt_buf);
+	vfree(pbt_buf);
 	return i_ret;
 }
 
@@ -1235,7 +746,7 @@ static ssize_t ftxxxx_tpfwver_show(struct device *dev, struct device_attribute *
 	if (fwver == 255)
 		num_read_chars = snprintf(buf, PAGE_SIZE, "fail\n");
 	else
-		num_read_chars = snprintf(buf, PAGE_SIZE, "0x%x\n", fwver);
+		num_read_chars = snprintf(buf, PAGE_SIZE, "%d\n", fwver);
 	mutex_unlock(&ftxxxx_ts->g_device_mutex);
 	wake_unlock(&ftxxxx_ts->wake_lock);
 	return num_read_chars;
@@ -1309,7 +820,33 @@ static ssize_t switch_glove_mode_store(struct device *dev, struct device_attribu
 static ssize_t switch_glove_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 
-	return sprintf(buf, "%d\n", ftxxxx_ts->glove_mode_eable);
+	return sprintf(buf, "%d \n", ftxxxx_ts->glove_mode_eable);
+}
+
+static ssize_t switch_cover_mode_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	int tmp = 0;
+
+	tmp = buf[0] - 48;
+
+	if (tmp == 0) {
+
+		focal_cover_switch(0);
+
+	} else if (tmp == 1) {
+
+		focal_cover_switch(1);
+
+	}
+
+	return count;
+
+}
+
+static ssize_t switch_cover_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+
+	return sprintf(buf, "%d \n", ftxxxx_ts->cover_mode_eable);
 }
 
 static ssize_t switch_dclick_mode_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
@@ -1320,13 +857,13 @@ static ssize_t switch_dclick_mode_store(struct device *dev, struct device_attrib
 
 	if (tmp == 0) {
 
-		ftxxxx_ts->dclick_mode_eable = false;
+		ftxxxx_ts->dclick_mode_eable = 0;
 
 		printk("[Focal][Touch] dclick_mode_disable ! \n");
 
 	} else if (tmp == 1) {
 
-		ftxxxx_ts->dclick_mode_eable = true;
+		ftxxxx_ts->dclick_mode_eable = 1;
 
 		printk("[Focal][Touch] dclick_mode_enable ! \n");
 	}
@@ -1338,7 +875,7 @@ static ssize_t switch_dclick_mode_store(struct device *dev, struct device_attrib
 static ssize_t switch_dclick_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 
-	return sprintf(buf, "%d\n", ftxxxx_ts->dclick_mode_eable);
+	return sprintf(buf, "%d \n", ftxxxx_ts->dclick_mode_eable);
 }
 
 static ssize_t switch_gesture_mode_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
@@ -1350,52 +887,52 @@ static ssize_t switch_gesture_mode_store(struct device *dev, struct device_attri
 
 	memset(gesture_buf, 0, sizeof(gesture_buf));
 	sprintf(gesture_buf, "%s", buf);
+	gesture_buf[count-1] = '\0';
 
 	printk("[Focal][Touch] gesture_mode_store %s ! \n", gesture_buf);
-	wake_lock(&ftxxxx_ts->wake_lock);
-	mutex_lock(&ftxxxx_ts->g_device_mutex);
+
 	if (gesture_buf[0] == cmpchar) {
 		ftxxxx_ts->gesture_mode_eable = true;
 		printk("[Focal][Touch] gesture_mode enable ! \n");
 	} else
 		ftxxxx_ts->gesture_mode_eable = false;
 
-	if (ftxxxx_ts->gesture_mode_eable == true) {
+	if (ftxxxx_ts->gesture_mode_eable == 1) {
 
-		for (tmp = 1; tmp < 7; tmp++) {
+		for (tmp = 0; tmp < 7; tmp++) {
 			if (gesture_buf[tmp] == cmpchar) {
-				gesturetmp |= (1 << (6-tmp));
+				gesturetmp |= (1 << tmp);
 			}
 		}
-//		printk("hjptest--->%d\n",gesturetmp);
+
 		ftxxxx_ts->gesture_mode_type = gesturetmp;
 
-		if ((ftxxxx_ts->gesture_mode_type & 0x01))//"V"
+		if ((ftxxxx_ts->gesture_mode_type & 1 << 6))
 			FTS_gesture_register_d6 = 0x10;
 		else
 			FTS_gesture_register_d6 = 0x0;
 
-		if ((ftxxxx_ts->gesture_mode_type & 1 << 1))//"Z"
+		if ((ftxxxx_ts->gesture_mode_type & 1 << 5))
 			FTS_gesture_register_d7 = 0x20;
 		else
 			FTS_gesture_register_d7 = 0x0;
 
-		if ((ftxxxx_ts->gesture_mode_type & 1 << 2))//"c"
+		if ((ftxxxx_ts->gesture_mode_type & 1 << 4))
 			FTS_gesture_register_d2 |= 0x10;
 		else
 			FTS_gesture_register_d2 &= 0xef;
 
-		if ((ftxxxx_ts->gesture_mode_type & 1 << 3))//"e"
+		if ((ftxxxx_ts->gesture_mode_type & 1 << 3))
 			FTS_gesture_register_d2 |= 0x08;
 		else
 			FTS_gesture_register_d2 &= 0xf7;
 
-		if ((ftxxxx_ts->gesture_mode_type & 1 << 4))//"S"
+		if ((ftxxxx_ts->gesture_mode_type & 1 << 2))
 			FTS_gesture_register_d5 |= 0x40;
 		else
 			FTS_gesture_register_d5 &= 0xbf;
 
-		if ((ftxxxx_ts->gesture_mode_type & 1 << 5))//"W"
+		if ((ftxxxx_ts->gesture_mode_type & 1 << 1))
 			FTS_gesture_register_d2 |= 0x02;
 		else
 			FTS_gesture_register_d2 &= 0xfd;
@@ -1404,7 +941,7 @@ static ssize_t switch_gesture_mode_store(struct device *dev, struct device_attri
 
 	} else {
 
-		ftxxxx_ts->gesture_mode_eable = false;
+		ftxxxx_ts->gesture_mode_eable = 0;
 
 		ftxxxx_ts->gesture_mode_type = 0;
 
@@ -1416,8 +953,7 @@ static ssize_t switch_gesture_mode_store(struct device *dev, struct device_attri
 
 		printk("[Focal][Touch] gesture_mode_disable ! \n");
 		}
-	mutex_unlock(&ftxxxx_ts->g_device_mutex);
-	wake_unlock(&ftxxxx_ts->wake_lock);
+
 	return count;
 
 }
@@ -1425,6 +961,32 @@ static ssize_t switch_gesture_mode_store(struct device *dev, struct device_attri
 static ssize_t switch_gesture_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%d\n", ftxxxx_ts->gesture_mode_type);
+}
+
+static ssize_t irq_disable_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	int tmp = 0;
+
+	tmp = buf[0] - 48;
+
+	if (tmp == 0) {
+
+		FOCAL_IRQ_DISABLE = false;
+
+	} else if (tmp == 1) {
+
+		FOCAL_IRQ_DISABLE = true;
+
+	}
+
+	return count;
+
+}
+
+static ssize_t irq_disable_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+
+	return sprintf(buf, "%d \n", FOCAL_IRQ_DISABLE);
 }
 
 static ssize_t switch_keypad_mode_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
@@ -1448,97 +1010,36 @@ static ssize_t switch_keypad_mode_show(struct device *dev, struct device_attribu
 	return sprintf(buf, "%d\n", ftxxxx_ts->keypad_mode_enable);
 }
 
-#ifdef ASUS_FACTORY_BUILD
-static ssize_t flip_cover_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+static ssize_t enable_proximity_check_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
-	return sprintf(buf, "%d\n", 0);
-}
-
-static ssize_t flip_cover_mode_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
-{
-	return count;
-}
-
-#else
-static ssize_t flip_cover_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%d\n", ftxxxx_ts->cover_mode_states);
-}
-
-static ssize_t flip_cover_mode_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
-{
-	
 	int tmp = 0;
-	
+
 	tmp = buf[0] - 48;
-	wake_lock(&ftxxxx_ts->wake_lock);
-	mutex_lock(&ftxxxx_ts->g_device_mutex);
+
 	if (tmp == 0) {
 
-		ftxxxx_ts->cover_mode_states = false;
-
-		if(ftxxxx_ts->suspend_flag ==1)
-			{
-                                    if ((ftxxxx_ts->dclick_mode_eable == true) ||(ftxxxx_ts->gesture_mode_eable == true))
-                                                {
-	                                        	ftxxxx_write_reg(ftxxxx_ts->client,0xC1,0);
-		                                      ftxxxx_write_reg(ftxxxx_ts->client,0xC3,0);//the filp cover is open
-                                                }else{
-                                                      ftxxxx_ts->clove_status=true;
-        	                                        printk("[Focal][Touch] the tp is deep sleep ! \n");
-			                                     }
-		}else{
-			ftxxxx_write_reg(ftxxxx_ts->client,0xC1,0);
-			ftxxxx_write_reg(ftxxxx_ts->client,0xC3,0);//the filp cover is open
-				
-				}
-		printk("[Focal][Touch] the filp cover is open ! \n");
-
+		EnableProximityCheck = false;
+		printk("[Focal][Touch] DisableProximityCheck ! \n");
 	} else if (tmp == 1) {
 
-		ftxxxx_ts->cover_mode_states = true;
-		ftxxxx_write_reg(ftxxxx_ts->client,0xC1,1);
-		ftxxxx_write_reg(ftxxxx_ts->client,0xC3,2);//the flip cover is close
-		printk("[Focal][Touch] the flip cover is close ! \n");
+		EnableProximityCheck = true;
+		printk("[Focal][Touch] EnableProximityCheck ! \n");
 	}
-	mutex_unlock(&ftxxxx_ts->g_device_mutex);
-	wake_unlock(&ftxxxx_ts->wake_lock);
-	return count;
-	
-}
 
-#endif
-
-
-
-static ssize_t irq_disable_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
-{
-	int tmp = 0;
-
-	tmp = buf[0] - 48;
-//	u8 ID_G_MODE=0xA5;
-	wake_lock(&ftxxxx_ts->wake_lock);
-	mutex_lock(&ftxxxx_ts->g_device_mutex);
-	if (tmp == 0) {
-		//ftxxxx_i2c_Write(ftxxxx_ts->client,char * writebuf,int writelen)
-		FOCAL_IRQ_DISABLE = true;
-
-	} else 
-	{
-		//ftxxxx_i2c_Write(ftxxxx_ts->client,char * writebuf,int writelen)
-		FOCAL_IRQ_DISABLE = false;
-	}
-	mutex_unlock(&ftxxxx_ts->g_device_mutex);
-	wake_unlock(&ftxxxx_ts->wake_lock);
 	return count;
 
 }
 
-
-static ssize_t irq_disable_show(struct device *dev, struct device_attribute *attr, char *buf)
+static ssize_t enable_proximity_check_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 
-	return sprintf(buf, "%d\n", FOCAL_IRQ_DISABLE);
+	return sprintf(buf, "%d \n", EnableProximityCheck);
+}
+
+static ssize_t irq_status_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+
+	return sprintf(buf, "%d \n", ftxxxx_ts->irq_lock_status);
 }
 
 static ssize_t ftxxxx_init_show(struct device *dev, struct device_attribute *attr, char *buf)
@@ -1554,7 +1055,8 @@ static ssize_t asus_get_tpid(struct device *dev, struct device_attribute *attr, 
 
 static ssize_t asus_get_hwid_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n", focal_get_HW_ID());
+//	return sprintf(buf, "%d\n", focal_get_HW_ID());
+	return sprintf(buf, "not support  in Android M branch ! \n");
 }
 
 static ssize_t asus_itr_status_show(struct device *dev, struct device_attribute *attr, char *buf)
@@ -1568,42 +1070,12 @@ static ssize_t asus_itr_status_show(struct device *dev, struct device_attribute 
 
 	return sprintf(buf, "%d\n", tmp);
 }
-//<asus-Jeffery20151202+>
-static ssize_t keyboard_enable_show(struct device *dev, struct device_attribute *attr, char *buf){
-return sprintf(buf,"%d\n",keyboard_enable);
-}
 
-static ssize_t keyboard_enable_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count){
-	int tmp = 0;
-	tmp = buf[0] - 48;
-	wake_lock(&ftxxxx_ts->wake_lock);
-	mutex_lock(&ftxxxx_ts->g_device_mutex);
-	if (tmp == 0) {
-		keyboard_enable = false;
-	}else{
-	keyboard_enable = true;
-	}
-	mutex_unlock(&ftxxxx_ts->g_device_mutex);
-	wake_unlock(&ftxxxx_ts->wake_lock);
-	return count;
-}
-
-//<asus-Jeffery20151202->
-//<asus-Jeffery20150604+>
-
-static ssize_t vendor_id_show(struct device *dev, struct device_attribute *attr, char *buf){
-
-	return sprintf(buf,"%d\n",LCM_TP_Vendor);
-}
-//<asus-Jeffery20150604->
 static ssize_t fw_info_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	int err = 0;
 	unsigned char uc_reg_addr;
-	u8 fwver;
-	wake_lock(&ftxxxx_ts->wake_lock);
-	mutex_lock(&ftxxxx_ts->g_device_mutex);
-	ftxxxx_nosync_irq_disable(ftxxxx_ts->client);
+
 	uc_reg_addr = FTXXXX_REG_VENDOR_ID;
 	err = ftxxxx_i2c_Read(ftxxxx_ts->client, &uc_reg_addr, 1, &F_VenderID, 1);
 	if (err < 0)
@@ -1613,7 +1085,7 @@ static ssize_t fw_info_show(struct device *dev, struct device_attribute *attr, c
 	err = ftxxxx_i2c_Read(ftxxxx_ts->client, &uc_reg_addr, 1, &F_projectcode, 1);
 	if (err < 0)
 		F_projectcode = 0xFF;
-	fwver=get_focal_tp_fw();
+
 	err = fts_ctpm_fw_upgrade_ReadProjectCode(ftxxxx_ts->client);
 
 	err = fts_ctpm_fw_upgrade_ReadVendorID(ftxxxx_ts->client, &B_VenderID);
@@ -1621,14 +1093,8 @@ static ssize_t fw_info_show(struct device *dev, struct device_attribute *attr, c
 		B_VenderID = 0xFF;
 
 	printk("[Focal][Touch] FW vendor ID = %x , FW project code = %x , Bootloader PRJ code = %s , Bootloader Vendor ID = %x\n", F_VenderID, F_projectcode, B_projectcode, B_VenderID);
-	ftxxxx_irq_enable(ftxxxx_ts->client);
-	mutex_unlock(&ftxxxx_ts->g_device_mutex);
-	wake_unlock(&ftxxxx_ts->wake_lock);
-	return sprintf(buf, "fw version :0x%x\n"
-						"tp glass vendor id :0x%x\n"
-						"project id :0x%x\n"
-						"Bootloader Vendor ID:0x%x\n"
-						"Bootloader PRJ code:%s\n", fwver,F_VenderID, F_projectcode, B_VenderID, B_projectcode);
+
+	return sprintf(buf, "%x-%x-%x-%s\n", F_VenderID, F_projectcode, B_VenderID, B_projectcode);
 }
 
 /* +++ASUS jacob add for get tp raw data +++*/
@@ -2088,7 +1554,7 @@ static ssize_t ftxxxx_tprwreg_store(struct device *dev, struct device_attribute 
 		if (ftxxxx_read_reg(client, regaddr, &regvalue) < 0)
 			printk("[Focal][TOUCH_ERR] %s : Could not read the register(0x%02x) \n", __func__, regaddr);
 		else
-			printk(KERN_EMERG"[Focal][Touch] %s : the register(0x%02x) is 0x%02x \n", __func__, regaddr, regvalue);
+			printk("[Focal][Touch] %s : the register(0x%02x) is 0x%02x \n", __func__, regaddr, regvalue);
 	} else {
 		regaddr = wmreg>>8;
 		regvalue = wmreg;
@@ -2102,6 +1568,85 @@ static ssize_t ftxxxx_tprwreg_store(struct device *dev, struct device_attribute 
 	wake_unlock(&ftxxxx_ts->wake_lock);
 	return count;
 }
+
+static ssize_t DoubleTapConfig_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	int count = 0;
+	u8 chck_buf[4] = { 0 };
+	chck_buf[0] = 0xe2;
+
+	ftxxxx_i2c_Read(ftxxxx_ts->client, chck_buf, 1, chck_buf, 4);
+
+	count += sprintf(buf, "Touch Slop = %x, Touch Distance = %x, Time Gap = %x, Int Delay Time = %x \n", chck_buf[0], chck_buf[1], chck_buf[2], chck_buf[3]);
+
+	return count;
+}
+
+static ssize_t DoubleTapConfig_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct i2c_client *client = container_of(dev, struct i2c_client, dev);
+//	ssize_t num_read_chars = 0;
+	int retval, i;
+	/*u32 wmreg=0;*/
+	long unsigned int wmreg=0;
+	int LoopBaseNum = 8;
+	u8 regaddr=0xff,regvalue=0xff;
+	u8 cvtbuf[5]={0};
+
+	wake_lock(&ftxxxx_ts->wake_lock);
+
+	mutex_lock(&ftxxxx_ts->g_device_mutex);
+
+	printk("[Focal][Touch] %s : DoubleTapConfig_store ! \n", __func__);
+
+	if (count/LoopBaseNum) {
+		for (i = 0; i < (count/LoopBaseNum); i++) {
+			if ((buf[LoopBaseNum*i] == 'w') && (buf[LoopBaseNum*i + 1] == ':') && (buf[LoopBaseNum*i + 2] == 'x')) {
+				memcpy(cvtbuf, buf + (LoopBaseNum*i + 3), 4);
+				printk("[Focal][Touch] %s : Set char %s ! \n", __func__, cvtbuf);
+				retval = strict_strtoul(cvtbuf, 16, &wmreg);
+				if (0 != retval) {
+					printk("[Focal][Touch] %s() - ERROR: Could not convert the given input to a number. The given input was: \"%s\"\n", __FUNCTION__, buf);
+					goto error_return;
+				}
+
+				regaddr = wmreg>>8;
+				regvalue = wmreg;
+				switch(regaddr) {
+				case 0xe2 :
+					g_touch_slop = regvalue;
+					ReConfigDoubleTap = true;
+					break;
+				case 0xe3 :
+					g_touch_distance = regvalue;
+					ReConfigDoubleTap = true;
+					break;
+				case 0xe4 :
+					g_time_gap = regvalue;
+					ReConfigDoubleTap = true;
+					break;
+				case 0xe5 :
+					g_int_time = regvalue;
+					ReConfigDoubleTap = true;
+					break;
+				}
+
+				if (ftxxxx_write_reg(client, regaddr, regvalue)<0)
+					printk("[Focal][TOUCH_ERR] %s : Could not write the register(0x%02x) \n", __func__, regaddr);
+				else
+					printk("[Focal][Touch] %s : Write 0x%02x into register(0x%02x) successful \n", __func__, regvalue, regaddr);
+
+			}
+		}
+	}
+
+	error_return:
+	mutex_unlock(&ftxxxx_ts->g_device_mutex);
+	wake_unlock(&ftxxxx_ts->wake_lock);
+
+	return count;
+}
+
 
 int iHigh = 1;
 static ssize_t ftxxxx_fwupdate_show(struct device *dev, struct device_attribute *attr, char *buf)
@@ -2121,17 +1666,31 @@ static ssize_t ftxxxx_fwupdate_show(struct device *dev, struct device_attribute 
 static ssize_t ftxxxx_fwupdate_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct ftxxxx_ts_data *data = NULL;
-
+/*	u8 uc_host_fm_ver;*/
+/*	int i_ret;*/
 	struct i2c_client *client = container_of(dev, struct i2c_client, dev);
 	data = (struct ftxxxx_ts_data *) i2c_get_clientdata(client);
-
-//	ftxxxx_irq_disable(ftxxxx_ts->client);
 
 	wake_lock(&ftxxxx_ts->wake_lock);
 
 	mutex_lock(&ftxxxx_ts->g_device_mutex);
+
 	ftxxxx_nosync_irq_disable(ftxxxx_ts->client);
-	fts_ctpm_auto_upgrade(client);
+
+/*	i_ret = fts_ctpm_fw_upgrade_with_i_file(client);
+	if (i_ret == 0)
+	{
+		msleep(300);
+		uc_host_fm_ver = fts_ctpm_get_i_file_ver();
+		dev_dbg(dev, "%s [FTS] upgrade to new version 0x%x\n", __FUNCTION__, uc_host_fm_ver);
+	}
+	else
+	{
+		dev_err(dev, "%s ERROR:[FTS] upgrade failed ret=%d.\n", __FUNCTION__, i_ret);
+	}
+*/
+	/*ftxxxxEnterUpgradeMode(client, 0 ,false);*/	/*asus : mark by focal Elmer*/
+	fts_ctpm_auto_upgrade(client, TM_FW);
 	ftxxxx_irq_enable(ftxxxx_ts->client);
 	mutex_unlock(&ftxxxx_ts->g_device_mutex);
 	wake_unlock(&ftxxxx_ts->wake_lock);
@@ -2142,15 +1701,14 @@ static ssize_t ftxxxx_fwupgradeapp_show(struct device *dev, struct device_attrib
 {
 	/* place holder for future use */
 	size_t count = 0;
-	if (fw_update_complete==4) {
+	if (fw_update_complete) {
 		printk("[Touch_H] FW Update Complete \n");
-		count += sprintf(buf, "%s\n", "[Touch_H] FW Update Complete");
-		return count;
 	} else {
 		printk("[Touch_H] FW Update Fail \n");
-		count += sprintf(buf, "%s\n", "[Touch_H] FW Update Fail");
-		return count;
 	}
+	count += sprintf(buf, "%d\n", fw_update_complete);
+
+	return count;
 }
 
 static ssize_t update_progress_show(struct device *dev, struct device_attribute *attr, char *buf)
@@ -2169,16 +1727,20 @@ static ssize_t ftxxxx_fwupgradeapp_store(struct device *dev, struct device_attri
 	sprintf(fwname, "%s", buf);
 	fwname[count-1] = '\0';
 
-//	ftxxxx_irq_disable(ftxxxx_ts->client);
-
 	wake_lock(&ftxxxx_ts->wake_lock);
 
 	mutex_lock(&ftxxxx_ts->g_device_mutex);
+
 	ftxxxx_nosync_irq_disable(ftxxxx_ts->client);
+
 	err_tmp = fts_ctpm_fw_upgrade_with_app_file(ftxxxx_ts->client, fwname);
 
-//	if (err_tmp != 0)
-//		ASUSEvtlog("[Touch] touch update fw fail ! \n");
+	if (err_tmp != 0) {
+#ifdef CONFIG_FT5X46_FC
+		ASUSEvtlog("[Touch] touch update fw fail ! \n");
+#endif
+	}
+	asus_check_touch_mode();
 
 	ftxxxx_irq_enable(ftxxxx_ts->client);
 
@@ -2298,12 +1860,12 @@ static ssize_t ftxxxx_ftsscaptest_show(struct device *dev, struct device_attribu
 
 	struct file *filp = NULL;
 	mm_segment_t oldfs = { 0 };
-	selftestflag=1;
+
 	wake_lock(&ftxxxx_ts->wake_lock);
 
 	mutex_lock(&ftxxxx_ts->g_device_mutex);
 
-	tmpbuf = kmalloc(BufLen, GFP_KERNEL);
+	tmpbuf = vmalloc(BufLen);
 
 	if (tmpbuf == NULL) {
 		printk("alloc data buf fail !\n");
@@ -2323,8 +1885,7 @@ static ssize_t ftxxxx_ftsscaptest_show(struct device *dev, struct device_attribu
 		printk("[Focal][TOUCH_ERR] %s: open /data/TP_Raw_data failed\n", __func__);
 		mutex_unlock(&ftxxxx_ts->g_device_mutex);
 		wake_unlock(&ftxxxx_ts->wake_lock);
-		kfree(tmpbuf);
-		selftestflag=0;
+		vfree(tmpbuf);
 		return 0;
 	}
 	oldfs = get_fs();
@@ -2337,7 +1898,7 @@ static ssize_t ftxxxx_ftsscaptest_show(struct device *dev, struct device_attribu
 			total_item++;
 		}
 	}
-	
+
 	for(i=2;i<4;i++)
 	{
 		if((flag[2*i]+flag[2*i+1])>0)
@@ -2377,7 +1938,7 @@ static ssize_t ftxxxx_ftsscaptest_show(struct device *dev, struct device_attribu
 	printk("[Focal][%s]	123 data result = %d !\n", __func__, err);
 
 	for (i = 0; i < TX_NUM; i++) {
-		
+
 		for (j = 0; j < RX_NUM; j++) {
 
 			count += snprintf(tmpbuf + count, BufLen - count, "%5d, ", TPrawdata[i][j]);
@@ -2387,10 +1948,10 @@ static ssize_t ftxxxx_ftsscaptest_show(struct device *dev, struct device_attribu
 		count += snprintf(tmpbuf + count, BufLen - count, "\n");
 	}
 
-	for (i = 0; i < TX_NUM; i++) 
+	for (i = 0; i < TX_NUM; i++)
 	{
-		
-		for (j = 0; j < RX_NUM; j++) 
+
+		for (j = 0; j < RX_NUM; j++)
 		{
 			count += snprintf(tmpbuf + count, BufLen - count,"%5d, ",  TxLinearity[i][j]);
 			//msleep(2000);
@@ -2399,10 +1960,10 @@ static ssize_t ftxxxx_ftsscaptest_show(struct device *dev, struct device_attribu
 		count += snprintf(tmpbuf + count, BufLen - count,"\n");
 	}
 
-	for (i = 0; i < TX_NUM; i++) 
+	for (i = 0; i < TX_NUM; i++)
 	{
-		
-		for (j = 0; j < RX_NUM; j++) 
+
+		for (j = 0; j < RX_NUM; j++)
 		{
 			count += snprintf(tmpbuf + count, BufLen - count,"%5d, ",  RxLinearity[i][j]);
 			//msleep(2000);
@@ -2411,20 +1972,20 @@ static ssize_t ftxxxx_ftsscaptest_show(struct device *dev, struct device_attribu
 		count += snprintf(tmpbuf + count, BufLen - count,"\n");
 	}
 
-	for (i = TX_NUM; i < TX_NUM+8; i++) 
+	for (i = TX_NUM; i < TX_NUM+8; i++)
 	{
 		if(i>=TX_NUM && flag[i-TX_NUM]==0)
-		{			
+		{
 			continue;
 		}
-		for (j = 0; j < RX_NUM; j++) 
+		for (j = 0; j < RX_NUM; j++)
 		{
 			if(i>=TX_NUM && j==TX_NUM && ((i-TX_NUM)%2)==1)
-			{			
+			{
 				break;
 			}
-			
-				
+
+
 			count += snprintf(tmpbuf + count, BufLen - count,"%5d, ",  TPrawdata[i][j]);
 			//msleep(2000);
 		}
@@ -2444,8 +2005,7 @@ static ssize_t ftxxxx_ftsscaptest_show(struct device *dev, struct device_attribu
 		printk("[Focal][TOUCH_ERR] %s: open /data/TP_Raw_data.txt failed\n", __func__);
 		mutex_unlock(&ftxxxx_ts->g_device_mutex);
 		wake_unlock(&ftxxxx_ts->wake_lock);
-		kfree(tmpbuf);
-		selftestflag=0;
+		vfree(tmpbuf);
 		return 0;
 	}
 	oldfs = get_fs();
@@ -2453,7 +2013,7 @@ static ssize_t ftxxxx_ftsscaptest_show(struct device *dev, struct device_attribu
 	printk("[Focal][%s]	dump data to CVS count = %d !\n", __func__, count);
 	count = 0;
 	for (i = 0; i < TX_NUM; i++) {
-		
+
 		for (j = 0; j < RX_NUM; j++) {
 
 			count += snprintf(tmpbuf + count, BufLen - count, "%5d, ", TPrawdata[i][j]);
@@ -2463,10 +2023,10 @@ static ssize_t ftxxxx_ftsscaptest_show(struct device *dev, struct device_attribu
 		count += snprintf(tmpbuf + count, BufLen - count, "\n");
 	}
 
-	for (i = 0; i < TX_NUM; i++) 
+	for (i = 0; i < TX_NUM; i++)
 	{
-		
-		for (j = 0; j < RX_NUM; j++) 
+
+		for (j = 0; j < RX_NUM; j++)
 		{
 			count += snprintf(tmpbuf + count, BufLen - count,"%5d, ",  TxLinearity[i][j]);
 			//msleep(2000);
@@ -2475,10 +2035,10 @@ static ssize_t ftxxxx_ftsscaptest_show(struct device *dev, struct device_attribu
 		count += snprintf(tmpbuf + count, BufLen - count,"\n");
 	}
 
-	for (i = 0; i < TX_NUM; i++) 
+	for (i = 0; i < TX_NUM; i++)
 	{
-		
-		for (j = 0; j < RX_NUM; j++) 
+
+		for (j = 0; j < RX_NUM; j++)
 		{
 			count += snprintf(tmpbuf + count, BufLen - count,"%5d, ",  RxLinearity[i][j]);
 			//msleep(2000);
@@ -2487,20 +2047,20 @@ static ssize_t ftxxxx_ftsscaptest_show(struct device *dev, struct device_attribu
 		count += snprintf(tmpbuf + count, BufLen - count,"\n");
 	}
 
-	for (i = TX_NUM; i < TX_NUM+8; i++) 
+	for (i = TX_NUM; i < TX_NUM+8; i++)
 	{
 		if(i>=TX_NUM && flag[i-TX_NUM]==0)
-		{			
+		{
 			continue;
 		}
-		for (j = 0; j < RX_NUM; j++) 
+		for (j = 0; j < RX_NUM; j++)
 		{
 			if(i>=TX_NUM && j==TX_NUM && ((i-TX_NUM)%2)==1)
-			{			
+			{
 				break;
 			}
-			
-				
+
+
 			count += snprintf(tmpbuf + count, BufLen - count,"%5d, ",  TPrawdata[i][j]);
 			//msleep(2000);
 		}
@@ -2515,9 +2075,9 @@ static ssize_t ftxxxx_ftsscaptest_show(struct device *dev, struct device_attribu
 	printk("[Focal][%s]	dump data to TXT count = %d !\n", __func__, count);
 	mutex_unlock(&ftxxxx_ts->g_device_mutex);
 	wake_unlock(&ftxxxx_ts->wake_lock);
-	kfree(tmpbuf);
+	vfree(tmpbuf);
 /*zax 20141116 --------------------*/
-	selftestflag=0;
+
 	if (TP_TEST_RESULT == 2) {
 		return sprintf(buf, "TP Raw Data Test PASS ! \n");
 	} else if (TP_TEST_RESULT == 1) {
@@ -2534,14 +2094,14 @@ static ssize_t ftxxxx_ftsscaptest_store(struct device *dev, struct device_attrib
 	int i=0;
 
 	struct i2c_client *client = container_of(dev, struct i2c_client, dev);
-	selftestflag=1;
-//	ftxxxx_irq_disable(ftxxxx_ts->client);
-	
+
 	/*	struct i2c_client *client = container_of(dev, struct i2c_client, dev);*/
 	wake_lock(&ftxxxx_ts->wake_lock);
 
 	mutex_lock(&ftxxxx_ts->g_device_mutex);
+
 	ftxxxx_nosync_irq_disable(ftxxxx_ts->client);
+
 	memset(cfgname, 0, sizeof(cfgname));
 	sprintf(cfgname, "%s", buf);
 	cfgname[count-1] = '\0';
@@ -2579,15 +2139,9 @@ static ssize_t ftxxxx_ftsscaptest_store(struct device *dev, struct device_attrib
 	ftxxxx_irq_enable(ftxxxx_ts->client);
 	mutex_unlock(&ftxxxx_ts->g_device_mutex);
 	wake_unlock(&ftxxxx_ts->wake_lock);
-	selftestflag=0;
 	return count;
 }
 #endif
-
-
-
-
-
 /****************************************/
 /* sysfs */
 /*get the fw version
@@ -2605,6 +2159,11 @@ static DEVICE_ATTR(ftsfwupdate, Focal_RW_ATTR, ftxxxx_fwupdate_show, ftxxxx_fwup
 *note:the number of input must be 2 or 4.if it not enough,please fill in the 0.
 */
 static DEVICE_ATTR(ftstprwreg, Focal_RW_ATTR, ftxxxx_tprwreg_show, ftxxxx_tprwreg_store);
+
+/* +++ ASUS add for read write Double tapsetting config +++ */
+static DEVICE_ATTR(DoubleTapConfig, Focal_RW_ATTR, DoubleTapConfig_show, DoubleTapConfig_store);
+/* --- ASUS add for read write Double tapsetting config --- */
+
 /*upgrade from app.bin
 *example:echo "*_app.bin" > ftsfwupgradeapp
 */
@@ -2623,28 +2182,26 @@ static DEVICE_ATTR(tp_fw_info, Focal_RW_ATTR, fw_info_show, NULL);
 static DEVICE_ATTR(update_progress, Focal_RW_ATTR, update_progress_show, NULL);
 static DEVICE_ATTR(set_reset_pin_level, Focal_RW_ATTR, set_reset_pin_level_show, set_reset_pin_level_store);
 static DEVICE_ATTR(glove_mode, Focal_RW_ATTR, switch_glove_mode_show, switch_glove_mode_store);
+static DEVICE_ATTR(cover_mode, Focal_RW_ATTR, switch_cover_mode_show, switch_cover_mode_store);
 static DEVICE_ATTR(dclick_mode, Focal_RW_ATTR, switch_dclick_mode_show, switch_dclick_mode_store);
 static DEVICE_ATTR(gesture_mode, Focal_RW_ATTR, switch_gesture_mode_show, switch_gesture_mode_store);
 static DEVICE_ATTR(keypad_mode, Focal_RW_ATTR, switch_keypad_mode_show, switch_keypad_mode_store);
 static DEVICE_ATTR(HW_ID, Focal_RW_ATTR, asus_get_hwid_show, NULL);
-static DEVICE_ATTR(tp_disable_or_enable, Focal_RW_ATTR, irq_disable_show, irq_disable_store);
-static DEVICE_ATTR(flip_cover_mode,Focal_RW_ATTR,flip_cover_mode_show,flip_cover_mode_store);
-static DEVICE_ATTR(vendor_id,Focal_RW_ATTR,vendor_id_show,NULL);//<asus-Jeffery20150604+>
-static DEVICE_ATTR(keyboardEnable,Focal_RW_ATTR,keyboard_enable_show,keyboard_enable_store);//<asus-Jeffery20151202+>
-
+static DEVICE_ATTR(IRQ_FORCE_DISABLE, Focal_RW_ATTR, irq_disable_show, irq_disable_store);
+static DEVICE_ATTR(IRQ_status, Focal_RW_ATTR, irq_status_show, NULL);
+static DEVICE_ATTR(Enable_Proximyty_Check, Focal_RW_ATTR, enable_proximity_check_show, enable_proximity_check_store);
 
 /*add your attr in here*/
 static struct attribute *ftxxxx_attributes[] = {
 	&dev_attr_ftstpfwver.attr,
 	&dev_attr_ftsfwupdate.attr,
 	&dev_attr_ftstprwreg.attr,
+	&dev_attr_DoubleTapConfig.attr,
 	&dev_attr_ftsfwupgradeapp.attr,
 	&dev_attr_ftsgetprojectcode.attr,
-	
-	
 #ifdef FTS_SELF_TEST
 	&dev_attr_ftsscaptest.attr,
-#endif 
+#endif
 	&dev_attr_ftresetic.attr,
 	&dev_attr_ftinitstatus.attr,
 	&dev_attr_dump_tp_raw_data.attr,
@@ -2655,14 +2212,14 @@ static struct attribute *ftxxxx_attributes[] = {
 	&dev_attr_update_progress.attr,
 	&dev_attr_set_reset_pin_level.attr,
 	&dev_attr_glove_mode.attr,
+	&dev_attr_cover_mode.attr,
 	&dev_attr_gesture_mode.attr,
 	&dev_attr_keypad_mode.attr,
 	&dev_attr_HW_ID.attr,
 	&dev_attr_dclick_mode.attr,
-	&dev_attr_tp_disable_or_enable.attr,
-	&dev_attr_flip_cover_mode.attr,
-	&dev_attr_vendor_id.attr,
-	&dev_attr_keyboardEnable.attr,
+	&dev_attr_IRQ_FORCE_DISABLE.attr,
+	&dev_attr_IRQ_status.attr,
+	&dev_attr_Enable_Proximyty_Check.attr,
 	NULL
 };
 
@@ -2719,8 +2276,7 @@ int ftxxxx_remove_sysfs(struct i2c_client * client)
 static unsigned char proc_operate_mode = PROC_UPGRADE;
 static struct proc_dir_entry *ftxxxx_proc_entry;
 /*interface of write proc*/
-
-static ssize_t ftxxxx_debug_write(struct file *filp, const char __user *buff, size_t len, loff_t *data)
+static int ftxxxx_debug_write(struct file *filp, const char __user *buff, unsigned long len, void *data)
 {
 	struct i2c_client *client = (struct i2c_client *)ftxxxx_ts->client;
 	unsigned char writebuf[FTS_PACKET_LENGTH];
@@ -2729,7 +2285,7 @@ static ssize_t ftxxxx_debug_write(struct file *filp, const char __user *buff, si
 	int ret = 0;
 	char upgrade_file_path[128];
 
-	if (copy_from_user(writebuf, buff, buflen)) {
+	if (copy_from_user(&writebuf, buff, buflen)) {
 		dev_err(&client->dev, "[Focal][TOUCH_ERR] %s : copy from user error \n", __func__);
 		return -EFAULT;
 	}
@@ -2785,22 +2341,21 @@ static ssize_t ftxxxx_debug_write(struct file *filp, const char __user *buff, si
 }
 
 /*interface of read proc*/
-
 bool proc_read_status;
-static ssize_t ftxxxx_debug_read(struct file *filp, char __user *buff, size_t len, loff_t *data)
+static ssize_t ftxxxx_debug_read(struct file *filp, char __user *buff, unsigned long len, void *data)
 {
 	struct i2c_client *client = (struct i2c_client *)ftxxxx_ts->client;
 	int ret = 0;
-	unsigned char buf[1000];
-	
+	unsigned char buf[PAGE_SIZE];
+	/*unsigned char *buf=NULL;*/
 	ssize_t num_read_chars = 0;
 	int readlen = 0;
 	u8 regvalue = 0x00, regaddr = 0x00;
 
-
+	/*buf = kmalloc(PAGE_SIZE, GFP_KERNEL);*/
 	switch (proc_operate_mode) {
 	case PROC_UPGRADE:
-		
+		/*after calling ftxxxx_debug_write to upgrade*/
 		regaddr = 0xA6;
 		ret = ftxxxx_read_reg(client, regaddr, &regvalue);
 		if (ret < 0)
@@ -2831,7 +2386,7 @@ static ssize_t ftxxxx_debug_read(struct file *filp, char __user *buff, size_t le
 	default:
 		break;
 	}
-	memcpy(buff, buf, num_read_chars);
+	copy_to_user(buff, buf, num_read_chars);
 	/*memcpy(buff, buf, num_read_chars);*/
 	/*kfree(buf);*/
 	if (!proc_read_status) {
@@ -2845,19 +2400,25 @@ static ssize_t ftxxxx_debug_read(struct file *filp, char __user *buff, size_t le
 
 static const struct file_operations debug_flag_fops = {
 		.owner = THIS_MODULE,
+		/*.open = proc_chip_check_running_open,*/
 		.read = ftxxxx_debug_read,
 		.write = ftxxxx_debug_write,
 };
 
 int ftxxxx_create_apk_debug_channel(struct i2c_client * client)
 {
-	ftxxxx_proc_entry = proc_create(PROC_NAME, 0777, NULL, &debug_flag_fops);
-	
+	ftxxxx_proc_entry = proc_create(PROC_NAME, 0666, NULL, &debug_flag_fops);
+	/*ftxxxx_proc_entry = proc_create(PROC_NAME, 0777, NULL);*/
 	if (NULL == ftxxxx_proc_entry) {
 		dev_err(&client->dev, "[Focal][TOUCH_ERR] %s: Couldn't create proc entry!\n", __func__);
 		return -ENOMEM;
 	} else {
 		dev_info(&client->dev, "[Focal][Touch] %s: Create proc entry success! \n", __func__);
+
+/*		ftxxxx_proc_entry->data = client;
+		ftxxxx_proc_entry->write_proc = ftxxxx_debug_write;
+		ftxxxx_proc_entry->read_proc = ftxxxx_debug_read;
+*/
 	}
 	return 0;
 }
@@ -2867,7 +2428,6 @@ void ftxxxx_release_apk_debug_channel(void)
 	if (ftxxxx_proc_entry)
 		remove_proc_entry(PROC_NAME, NULL);
 }
-
 #endif
 /*asus */
 
@@ -3061,3 +2621,73 @@ int fts_ctpm_fw_upgrade_ReadProjectCode(struct i2c_client *client)
 }
 /*asus*/
 
+/* +++ asus jacob add for auto fw update +++ */
+
+
+
+int focal_fw_auto_update(struct i2c_client *client)
+{
+	int err_code = 0;
+//	int tar_fw_ver = 0;
+//	int tar_vendor_config = 0;
+	u8 tar_vendor_id = 0;
+
+	/* 1. get touch ic tp vendor */
+	g_vendor_id = ftxxxx_read_tp_id();
+	if (g_vendor_id == 0xFF) {
+		printk("[TOUCH_ERR] %s : Read Vendor ID fail ! \n", __func__);
+		return 2;
+	}
+	printk("[Focal][Touch] %s : Vendor ID = %x \n", __func__, g_vendor_id);
+
+	if (g_asus_lcdID == 0) {	//AUO panel
+		tar_vendor_id = (g_vendor_id & 0xf0) | 0x3;
+	} else if (g_asus_lcdID == 2) {	//BOE panel
+		tar_vendor_id = (g_vendor_id & 0xf0) | 0x4;
+	} else {						//others
+		tar_vendor_id = g_vendor_id;
+	}
+
+	printk("[Focal][Touch] %s : ASUS judgment Vendor ID = %x \n", __func__, tar_vendor_id);
+
+	g_vendor_id = tar_vendor_id;
+
+	wake_lock(&ftxxxx_ts->wake_lock);
+
+	mutex_lock(&ftxxxx_ts->g_device_mutex);
+
+	switch (tar_vendor_id) {
+	case TP_TM :
+		fw_size = sizeof(TM_FW);
+		err_code = fts_ctpm_auto_upgrade(client, TM_FW);
+		break;
+	case TP_TM_old :
+		fw_size = sizeof(TM_FW);
+		err_code = fts_ctpm_auto_upgrade(client, TM_FW);
+		break;
+	case TP_GIS_AUO :
+		fw_size = sizeof(GIS_AUO_FW);
+		err_code = fts_ctpm_auto_upgrade(client, GIS_AUO_FW);
+		break;
+	case TP_GIS_BOE :
+		fw_size = sizeof(GIS_BOE_FW);
+		err_code = fts_ctpm_auto_upgrade(client, GIS_BOE_FW);
+		break;
+	case TP_TOT_AUO :
+		fw_size = sizeof(TOT_AUO_FW);
+		err_code = fts_ctpm_auto_upgrade(client, TOT_AUO_FW);
+		break;
+	case TP_TOT_BOE :
+		fw_size = sizeof(TOT_BOE_FW);
+		err_code = fts_ctpm_auto_upgrade(client, TOT_BOE_FW);
+		break;
+	}
+
+	mutex_unlock(&ftxxxx_ts->g_device_mutex);
+
+	wake_unlock(&ftxxxx_ts->wake_lock);
+
+	return err_code;
+}
+
+/* --- asus jacob add for auto fw update --- */

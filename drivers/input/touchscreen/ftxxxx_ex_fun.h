@@ -15,7 +15,6 @@
 #include <asm/uaccess.h>
 #include <linux/fs.h>
 #include <linux/string.h>
-#include "ftxxxx_ts.h"
 /*#include <linux/ft3x17.h>*/
 /*
  * #define IC_FT6208	0
@@ -30,8 +29,6 @@
 #define FT_UPGRADE_55					0x55
 #define FT_APP_INFO_ADDR				0xd7f8
 #define FT_UPGRADE_EARSE_DELAY			1500
-#define FTXXXX_REG_FW_VER 				0xA6
-
 
 /*upgrade config of FT5X46*/
 #define FT5X46_UPGRADE_AA_DELAY 		2
@@ -39,13 +36,6 @@
 #define FT5X46_UPGRADE_ID_1				0x54
 #define FT5X46_UPGRADE_ID_2				0x2c
 #define FT5X46_UPGRADE_READID_DELAY 	20
-
-/*********add by jinpeng_he *********/
-#define FT_REG_FW_VER			0xA6
-#define FT_REG_FW_MIN_VER		0xB2
-#define FT_REG_FW_SUB_MIN_VER	0xB3
-/******************************/
-
 
 #define	DEVICE_IC_TYPE	IC_FT5X46
 
@@ -80,7 +70,7 @@ void ftxxxx_release_apk_debug_channel(void);
 int fts_ctpm_fw_preupgrade_hwreset(struct i2c_client * client, u8* pbt_buf, u32 dw_lenth);
 int fts_ctpm_fw_preupgrade(struct i2c_client * client, u8* pbt_buf, u32 dw_lenth);
 int fts_ctpm_fw_upgrade(struct i2c_client * client, u8* pbt_buf, u32 dw_lenth);
-
+int focal_fw_auto_update(struct i2c_client *client);
 int fts_ctpm_fw_upgrade_ReadProjectCode(struct i2c_client *client);
 int fts_ctpm_fw_upgrade_ReadVendorID(struct i2c_client *client, u8 *ucPVendorID);
 /*
@@ -96,16 +86,5 @@ int ftxxxx_read_reg(struct i2c_client * client,u8 regaddr, u8 * regvalue);
 
 int FTS_I2c_Read(unsigned char * wBuf, int wLen, unsigned char *rBuf, int rLen);
 int FTS_I2c_Write(unsigned char * wBuf, int wLen);
-int fts_ctpm_auto_upgrade(struct i2c_client *client);
-void ftxxxx_update_fw_ver(struct ftxxxx_ts_data *data);
-/****************add by jinpeng_he for create proc *******************/
-
-int ftxxxx_create_apk_debug_channel(struct i2c_client * client);
-
-
-void ftxxxx_release_apk_debug_channel(void);
-
-
-
 
 #endif

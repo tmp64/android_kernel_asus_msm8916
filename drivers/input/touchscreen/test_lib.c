@@ -1225,7 +1225,7 @@ static void GetRawData(short RawData[TX_NUM_MAX][RX_NUM_MAX])
 boolean StartTestTP(void) 
 {
 	bRawdataTest = true;
-	printk("hjptest--->[focal] %s start \n", __func__);
+	printk("[focal] %s start \n", __func__);
 	TestTp();
 
 	return bRawdataTest;
@@ -1299,10 +1299,10 @@ boolean TestItem_RawDataTest_FT5X46(void)
 {
 	boolean bTestReuslt = true;
 	boolean bUse = false;
-	int i = 0, j = 0, count = 0;
-	char buf[1024];
+	int i = 0, j = 0;//, count = 0;
+//	char buf[TX_NUM_MAX];
 	short min_value, max_value;
-	FTS_DBG("hjptest--->==============================Test Item: -----  RawDataTest_FT5X46\n");
+	FTS_DBG("==============================Test Item: -----  RawDataTest_FT5X46\n");
 
 	//设置低频点
 	if(g_TestParam_FT5X46.RawDataTest_LowFreq == 1)
@@ -1329,21 +1329,22 @@ boolean TestItem_RawDataTest_FT5X46(void)
 		}
 		GetRawData(rawdata);
 		/////////////////Print RawData Start	
-		printk("hjptest--->[FocalTech]dump rawdata\n");
+/*
+		printk("[FocalTech]dump rawdata\n");
 		for(i = 0;i < iTxNum;i++)
 		{
-/*			printk("\n");*/
+			printk("\n");
 			count = 0;
 			for(j = 0;j < iRxNum;j++)
 			{
 				count += sprintf(buf + count, "%5d ", rawdata[i][j]);
-/*				printk("%5d  ", rawdata[i][j]);*/
+				printk("%5d  ", rawdata[i][j]);
 			}
-			//printk("[Focal][testdata] TX%d = %s \n", i, buf);
+			printk("[Focal][testdata] TX%d = %s \n", i, buf);
 		}
-		//printk("\n");
+		printk("\n");
 		/////////////////Print RawData End
-
+*/
 		for(i = 0;i < iTxNum;i++)
 		{
 			for(j = 0;j < iRxNum;j++)
@@ -1360,7 +1361,7 @@ boolean TestItem_RawDataTest_FT5X46(void)
 			}
 		}
 
-		FTS_DBG("hjptest--->=========FIR State: OFF\n");	
+		FTS_DBG("=========FIR State: OFF\n");	
 		WriteReg(0xFB, 0x00);	
 		focal_msleep(10);
 
@@ -1373,19 +1374,22 @@ boolean TestItem_RawDataTest_FT5X46(void)
 		GetRawData(rawdata);
 
 		/*Print RawData Start*/
+/*
 		for(i = 0;i < iTxNum;i++)
 		{
-/*			printk("\n");*/
+			printk("\n");
 			count = 0;
 			for(j = 0;j < iRxNum;j++)
 			{
 				count += sprintf(buf + count, "%5d ", rawdata[i][j]);
-/*				printk("%5d  ", rawdata[i][j]);*/
+			printk("%5d  ", rawdata[i][j]);
 			}
-		//	printk("[Focal][testdata] TX%d = %s \n", i, buf);
+			printk("[Focal][testdata] TX%d = %s \n", i, buf);
 		}
-	//	printk("\n");
+		printk("\n");
+*/
 		/*Print RawData End*/
+
 
 		for(i = 0;i < iTxNum;i++)
 		{
@@ -1411,9 +1415,9 @@ boolean TestItem_RawDataTest_FT5X46(void)
 	if(g_TestParam_FT5X46.RawDataTest_HighFreq== 1)
 	{
 		bUse = true;
-		FTS_DBG("hjptest--->=========Set Frequecy High\n");
+		FTS_DBG("=========Set Frequecy High\n");
 		WriteReg(0x0a, 0x81);
-		FTS_DBG("hjptest--->=========FIR State: ON\n");	
+		FTS_DBG("=========FIR State: ON\n");	
 		WriteReg(0xFB, 0x01);
 		focal_msleep(10);
 
@@ -1433,18 +1437,19 @@ boolean TestItem_RawDataTest_FT5X46(void)
 		GetRawData(rawdata);
 
 		/////////////////Print RawData Start	
-		for(i = 0;i < iTxNum;i++)
+/*		for(i = 0;i < iTxNum;i++)
 		{
-/*			printk("\n");*/
+			printk("\n");
 			count = 0;
 			for(j = 0;j < iRxNum;j++)
 			{
 				count += sprintf(buf + count, "%5d ", rawdata[i][j]);
-/*				printk("%5d  ", rawdata[i][j]);*/
+				printk("%5d  ", rawdata[i][j]);
 			}
-		//	printk("[Focal][testdata] TX%d = %s \n", i, buf);
+			printk("[Focal][testdata] TX%d = %s \n", i, buf);
 		}
-	//	printk("\n");
+		printk("\n");
+*/
 		/////////////////Print RawData End
 
 		for(i = 0;i < iTxNum;i++)
@@ -1455,7 +1460,7 @@ boolean TestItem_RawDataTest_FT5X46(void)
 
 				min_value = g_TestParam_FT5X46.RawDataTest_High_Min_node[i][j];
 				max_value = g_TestParam_FT5X46.RawDataTest_High_Max_node[i][j];
-				//jinpeng_he add comment here failed here1 
+
 				if(rawdata[i][j] < min_value || rawdata[i][j] > max_value)
 				{
 					bTestReuslt  = false;
@@ -1465,7 +1470,7 @@ boolean TestItem_RawDataTest_FT5X46(void)
 			}
 		}
 
-		FTS_DBG("hjptest--->=========FIR State: OFF\n");	
+		FTS_DBG("=========FIR State: OFF\n");	
 		WriteReg(0xFB, 0x00);	
 		focal_msleep(10);
 
@@ -1478,19 +1483,21 @@ boolean TestItem_RawDataTest_FT5X46(void)
 		GetRawData(rawdata);
 
 		/*zax 20141116+++++++++++++++++++++++*/
+
 		for(i = 0;i < iTxNum;i++)
 		{
-/*			printk("\n");*/
-			count = 0;
+//			printk("\n");
+//			count = 0;
 			for(j = 0;j < iRxNum;j++)
 			{
-				count += sprintf(buf + count, "%5d ", rawdata[i][j]);
-/*				printk("%5d  ", rawdata[i][j]);*/
+//				count += sprintf(buf + count, "%5d ", rawdata[i][j]);
+//				printk("%5d  ", rawdata[i][j]);
 				Save_rawData[i][j]=rawdata[i][j];
 			}
-		//	printk("[Focal][testdata] TX%d = %s \n", i, buf);
+//			printk("[Focal][testdata] TX%d = %s \n", i, buf);
 		}
-	//	printk("\n");
+//		printk("\n");
+
 		/*zax 20141116------------------------------*/
 
 		for(i = 0;i < iTxNum;i++)
@@ -1501,7 +1508,7 @@ boolean TestItem_RawDataTest_FT5X46(void)
 
 				min_value = g_TestParam_FT5X46.RawDataTest_High_Min_node[i][j];
 				max_value = g_TestParam_FT5X46.RawDataTest_High_Max_node[i][j];
-				//jinpeng_he add comment here failed here12
+
 				if(rawdata[i][j] < min_value || rawdata[i][j] > max_value)
 				{
 					bTestReuslt  = false;
@@ -1519,11 +1526,11 @@ TEST_END:
 	{
 		if( bTestReuslt)
 		{
-			printk("hjptest--->RawData Test is OK.\n");
+			printk("RawData Test is OK.\n");
 		}
 		else
 		{
-			printk("hjptest--->RawData Test is NG.\n");
+			printk("RawData Test is NG.\n");
 		}
 	}
 
@@ -1568,7 +1575,7 @@ boolean TestItem_WeakShortTest(void)
 	int *iAdcData = NULL;
 	/*int iAdcData[sizeof(int)*iAllAdcDataNum];*/
 	int fKcal = 0;
-	int fMShortResistance[80*2], fGShortResistance[80*2];
+	int fMShortResistance[50*2], fGShortResistance[50*2];
 	//float fKcal = 0;
 	//float fMShortResistance[80*2], fGShortResistance[80*2];
 	int iDoffset = 0, iDsen = 0, iDrefn = 0, iMaxD = 0;
@@ -2080,10 +2087,10 @@ boolean TestItem_SCapCbTest()
 	unsigned char I2C_wBuffer[1];
 	unsigned char regAddr = 0x09, regData = 0;
 
-	FTS_DBG("hjptest--->==============================Test Item: -----  TestItem_SCapCbTest_FT5X46\n");
+	FTS_DBG("==============================Test Item: -----  TestItem_SCapCbTest_FT5X46\n");
 
 	ReCode = ReadReg( regAddr, &regData );
-	printk("hjptest--->[Focal] %s : Water_Channel_Select ReCode = %d regData = %d \n", __func__, ReCode, regData);
+	printk("[Focal] %s : Water_Channel_Select ReCode = %d regData = %d \n", __func__, ReCode, regData);
 	
 
 	btmpresult = SwitchToNoMapping();
@@ -2109,12 +2116,12 @@ boolean TestItem_SCapCbTest()
 			
 			for (index = 0; index < SCap_iRxNum; ++index) {
 				SCap_rawData[0 + SCap_iTxNum][index]= pReadData[index];
-			//	printk("zax SCap_rawData0  %d   \n", pReadData[index]);
+				printk("zax SCap_rawData0  %d   \n", pReadData[index]);
 			}
 
 			for (index = 0; index < SCap_iTxNum; ++index) {
 				SCap_rawData[1 + SCap_iTxNum][index] = pReadData[index + SCap_iRxNum];
-			//	printk("zax SCap_rawData1  %d   \n", pReadData[index + SCap_iRxNum]);
+				printk("zax SCap_rawData1  %d   \n", pReadData[index + SCap_iRxNum]);
 			}
 
 			/*water resist mode*/
@@ -2126,29 +2133,29 @@ boolean TestItem_SCapCbTest()
 			ReCode = GetTxSC_CB( SCap_iRxNum + SCap_iTxNum + 128, pReadData);
 			for (index = 0; index < SCap_iRxNum; ++index) {
 				SCap_rawData[2 + SCap_iTxNum][index]= pReadData[index];
-			//	printk("zax SCap_rawData2  %d   \n", pReadData[index]);
+				printk("zax SCap_rawData2  %d   \n", pReadData[index]);
 			}
 
 			for (index = 0; index < SCap_iTxNum; ++index) {
 				SCap_rawData[3 + SCap_iTxNum][index] = pReadData[index + SCap_iRxNum];
-			//	printk("zax SCap_rawData3  %d   \n", pReadData[index + SCap_iRxNum]);
+				printk("zax SCap_rawData3  %d   \n", pReadData[index + SCap_iRxNum]);
 			}
 
 			if (ReCode < ERROR_CODE_OK) {
-				printk("hjptest--->Failed to Get SCap CB!\n");
+				printk("Failed to Get SCap CB!\n");
 			}		
 		}
 	}
 	else
 	{
-		printk("hjptest--->Failed to Scan SCap CB!!\n");
+		printk("Failed to Scan SCap CB!!\n");
 	}
 
 	/*check if the data out of spec*/
 
 	if (ReCode >= ERROR_CODE_OK) {	
 		bFlag = NeedProofOnTest(regData);
-		printk("hjptest--->Need Proof on Test %d	%d\n", bFlag ,g_TestParam_FT5X46.SCapCbTest_SetWaterproof_ON);
+		printk("Need Proof on Test %d	%d\n", bFlag ,g_TestParam_FT5X46.SCapCbTest_SetWaterproof_ON);
 		if (g_TestParam_FT5X46.SCapCbTest_SetWaterproof_ON && bFlag) {
 			CBMin = g_TestParam_FT5X46.SCapCbTest_ON_Min_Value;
 			CBMax = g_TestParam_FT5X46.SCapCbTest_ON_Max_Value;
@@ -2158,8 +2165,8 @@ boolean TestItem_SCapCbTest()
 			iAvg = 0;
 			Value = 0;
 
-			printk("hjptest--->WaterProof On Mode:  \n");
-			printk("hjptest--->SCap CB_Rx:  \n");
+			printk("WaterProof On Mode:  \n");
+			printk("SCap CB_Rx:  \n");
 			bFlag = NeedRxOnVal(regData);
 			SCab_1=bFlag;/*zax 20141116+++++++++++++++++++++++*/
 			for( i = 0;bFlag && i < SCap_iRxNum; i++ ) {
@@ -2171,7 +2178,7 @@ boolean TestItem_SCapCbTest()
 				iAvg += Value;
 				CBMin = g_TestParam_FT5X46.SCapCbTest_ON_Min[0][i];
 				CBMax = g_TestParam_FT5X46.SCapCbTest_ON_Max[0][i];
-			//	printk("node_%d Value = %d CBMax=%d CBMin=%d \n", i, Value, CBMax, CBMin);
+				printk("node_%d Value = %d CBMax=%d CBMin=%d \n", i, Value, CBMax, CBMin);
 				if(iMax < Value)
 					iMax = Value;
 				if(iMin > Value)
@@ -2180,7 +2187,7 @@ boolean TestItem_SCapCbTest()
 					btmpresult = false;
 			}
 
-			printk("hjptest--->SCap CB_Tx:  \n");
+			printk("SCap CB_Tx:  \n");
 			bFlag = NeedTxOnVal(regData);
 			SCab_2=bFlag;/*zax 20141116+++++++++++++++++++++++*/
 			for(i = 0;bFlag &&  i < SCap_iTxNum; i++) {
@@ -2192,7 +2199,7 @@ boolean TestItem_SCapCbTest()
 				Save_rawData[5+SCap_iTxNum][i] = Value;	/*zax 20141116+++++++++++++++++++++++*/
 				CBMin = g_TestParam_FT5X46.SCapCbTest_ON_Min[1][i];
 				CBMax = g_TestParam_FT5X46.SCapCbTest_ON_Max[1][i];
-			//	printk("node_%d Value = %d CBMax=%d CBMin=%d \n", i, Value, CBMax, CBMin);
+				printk("node_%d Value = %d CBMax=%d CBMin=%d \n", i, Value, CBMax, CBMin);
 				iAvg += Value;
 				if(iMax < Value)
 					iMax = Value;
@@ -2204,12 +2211,12 @@ boolean TestItem_SCapCbTest()
 
 			iAvg = iAvg/(SCap_iTxNum + SCap_iRxNum);
 
-			printk("hjptest--->Max SCap CB: %d, Min SCap CB: %d, Deviation Value: %d, Average Value: %d\n", iMax, iMin, iMax - iMin, iAvg);
+			printk("Max SCap CB: %d, Min SCap CB: %d, Deviation Value: %d, Average Value: %d\n", iMax, iMin, iMax - iMin, iAvg);
 
 		}
 		
 		bFlag = NeedProofOffTest(regData);
-		printk("hjptest--->Need Proof off Test %d	%d\n", bFlag ,g_TestParam_FT5X46.SCapCbTest_SetWaterproof_OFF);
+		printk("Need Proof off Test %d	%d\n", bFlag ,g_TestParam_FT5X46.SCapCbTest_SetWaterproof_OFF);
 		
 		if (g_TestParam_FT5X46.SCapCbTest_SetWaterproof_OFF && bFlag) {
 			CBMin = g_TestParam_FT5X46.SCapCbTest_OFF_Min_Value;
@@ -2220,8 +2227,8 @@ boolean TestItem_SCapCbTest()
 			iAvg = 0;
 			Value = 0;
 
-			printk("hjptest--->WaterProof Off Mode:  \n");
-			printk("hjptest--->SCap CB_Rx:  \n");
+			printk("WaterProof Off Mode:  \n");
+			printk("SCap CB_Rx:  \n");
 			bFlag = NeedRxOffVal(regData);
 			SCab_3=bFlag;/*zax 20141116+++++++++++++++++++++++*/
 			for (i = 0; bFlag && (i < SCap_iRxNum); i++) {
@@ -2234,7 +2241,7 @@ boolean TestItem_SCapCbTest()
 
 				CBMin = g_TestParam_FT5X46.SCapCbTest_OFF_Min[0][i];
 				CBMax = g_TestParam_FT5X46.SCapCbTest_OFF_Max[0][i];
-			//	printk("node_%d Value = %d CBMax=%d CBMin=%d \n", i, Value, CBMax, CBMin);
+				printk("node_%d Value = %d CBMax=%d CBMin=%d \n", i, Value, CBMax, CBMin);
 				if(iMax < Value)
 					iMax = Value;
 				if(iMin > Value)
@@ -2243,7 +2250,7 @@ boolean TestItem_SCapCbTest()
 					btmpresult = false;
 			}
 
-			printk("hjptest--->SCap CB_Tx:  \n");
+			printk("SCap CB_Tx:  \n");
 			bFlag = NeedTxOffVal(regData);
 			SCab_4=bFlag;/*zax 20141116+++++++++++++++++++++++*/
 			for(i = 0; bFlag && (i < SCap_iTxNum); i++)
@@ -2256,7 +2263,7 @@ boolean TestItem_SCapCbTest()
 
 				CBMin = g_TestParam_FT5X46.SCapCbTest_OFF_Min[1][i];
 				CBMax = g_TestParam_FT5X46.SCapCbTest_OFF_Max[1][i];
-			//	printk("node_%d Value = %d CBMax=%d CBMin=%d \n", i, Value, CBMax, CBMin);
+				printk("node_%d Value = %d CBMax=%d CBMin=%d \n", i, Value, CBMax, CBMin);
 				iAvg += Value;
 				if(iMax < Value)
 					iMax = Value;
@@ -2276,9 +2283,9 @@ boolean TestItem_SCapCbTest()
 
 TEST_END:
 	if (btmpresult) {
-		printk("hjptest--->SCap CB Test is OK\n");
+		printk("SCap CB Test is OK\n");
 	} else {
-		printk("hjptest--->SCap CB Test is NG\n");
+		printk("SCap CB Test is NG\n");
 	}
 	return btmpresult;
 }
@@ -2360,7 +2367,7 @@ unsigned char ReadRawData(unsigned char Freq, unsigned char LineNum, int ByteNum
 		for(i=0; i<(ByteNum>>1); i++)
 		{
 			pRevBuffer[i] = (pReadData[i<<1]<<8)+pReadData[(i<<1)+1];
-		//	printk("zaxzax ReadRawData %d\n",pRevBuffer[i]);
+			printk("zaxzax ReadRawData %d\n",pRevBuffer[i]);
 			
 		}
 	}
@@ -2377,13 +2384,13 @@ boolean TestItem_SCapRawDataTest()
 	unsigned char ReCode;
 	boolean btmpresult = true;
 	int iMax, iMin, iAvg;
-	int prawData[300] = {0};
+	int prawData[200] = {0};
 	unsigned char regAddr = 0x09, regData = 0;
 
-	FTS_DBG("hjptest--->==============================Test Item: -----  Scap_RawData_Test_FT5X46\n");
+	FTS_DBG("==============================Test Item: -----  Scap_RawData_Test_FT5X46\n");
 
    	 ReCode = ReadReg( regAddr, &regData );
-	printk("hjptest--->[Focal] %s : Water_Channel_Select ReCode = %d regData = %d \n", __func__, ReCode, regData);
+	printk("[Focal] %s : Water_Channel_Select ReCode = %d regData = %d \n", __func__, ReCode, regData);
 
 	btmpresult= SwitchToNoMapping();
 	if (!btmpresult)
@@ -2419,14 +2426,14 @@ boolean TestItem_SCapRawDataTest()
 			if (ReCode < ERROR_CODE_OK) {
 				//str.Format("Error Code: %s",g_ErrorMsg[ReCode]);
 				//TestResultInfo("\r\nFailed to Get SCap RawData! " + str);
-				printk("hjptest--->Failed to Get SCap RawData!\n");
+				printk("Failed to Get SCap RawData!\n");
 			}		
 		}
 	} else {
 		//str.Format("Error Code: %s",g_ErrorMsg[ReCode]);
 		//TestResultInfo("\r\nFailed to Scan SCap RawData! " + str);
 
-		printk("hjptest--->Failed to Scan SCap RawData! \n");
+		printk("Failed to Scan SCap RawData! \n");
 	}
 
 	/*check if the data out of spec*/
@@ -2442,7 +2449,7 @@ boolean TestItem_SCapRawDataTest()
 			iAvg = 0;
 			Value = 0;
 
-			printk("hjptest--->SCap RawData_Rx:\n");
+			printk("SCap RawData_Rx:\n");
 			bFlag = NeedRxOnVal(regData);
 			SCab_5=bFlag;/*zax 20141116+++++++++++++++++++++++*/
 			for ( i = 0; bFlag && (i < SCap_iRxNum); i++ ) {
@@ -2454,7 +2461,7 @@ boolean TestItem_SCapRawDataTest()
 				iAvg += Value;
 				RawDataMin = g_TestParam_FT5X46.SCapRawDataTest_ON_Min[0][i];
 				RawDataMax = g_TestParam_FT5X46.SCapRawDataTest_ON_Max[0][i];
-			//	printk("node_%d Value = %d RawDataMax=%d RawDataMin=%d \n", i, Value, RawDataMax, RawDataMin);
+				printk("node_%d Value = %d RawDataMax=%d RawDataMin=%d \n", i, Value, RawDataMax, RawDataMin);
 
 				if (iMax < Value)
 					iMax = Value;
@@ -2464,7 +2471,7 @@ boolean TestItem_SCapRawDataTest()
 					btmpresult = false;
 			}
 
-			printk("hjptest--->SCap RawData_Tx:\n");
+			printk("SCap RawData_Tx:\n");
 			bFlag = NeedTxOnVal(regData);
 			SCab_6=bFlag;/*zax 20141116+++++++++++++++++++++++*/
 			for (i = 0; bFlag && i < SCap_iTxNum; i++) {
@@ -2475,7 +2482,7 @@ boolean TestItem_SCapRawDataTest()
 				Save_rawData[1+SCap_iTxNum][i] = Value;	/*zax 20141116+++++++++++++++++++++++*/
 				RawDataMin = g_TestParam_FT5X46.SCapRawDataTest_ON_Min[1][i];
 				RawDataMax = g_TestParam_FT5X46.SCapRawDataTest_ON_Max[1][i];
-			//	printk("node_%d Value = %d RawDataMax=%d RawDataMin=%d \n", i, Value, RawDataMax, RawDataMin);
+				printk("node_%d Value = %d RawDataMax=%d RawDataMin=%d \n", i, Value, RawDataMax, RawDataMin);
 				iAvg += Value;
 				if (iMax < Value)
 					iMax = Value;
@@ -2486,7 +2493,7 @@ boolean TestItem_SCapRawDataTest()
 			}
 
 			iAvg = iAvg/(SCap_iTxNum + SCap_iRxNum);
-			printk("hjptest--->Max SCap RawData: %d, Min SCap RawData: %d, Deviation Value: %d, Average Value: %d\n", iMax, iMin, iMax - iMin, iAvg);
+			printk("Max SCap RawData: %d, Min SCap RawData: %d, Deviation Value: %d, Average Value: %d\n", iMax, iMin, iMax - iMin, iAvg);
 
 		}
 		bFlag = NeedProofOffTest(regData);
@@ -2498,7 +2505,7 @@ boolean TestItem_SCapRawDataTest()
 			iAvg = 0;
 			Value = 0;
 
-			printk("hjptest--->SCap RawData_Rx:\n");
+			printk("SCap RawData_Rx:\n");
 			bFlag = NeedRxOffVal(regData);
 			SCab_7=bFlag;/*zax 20141116+++++++++++++++++++++++*/
 			for (i = 0; bFlag && (i < SCap_iRxNum); i++) {
@@ -2511,7 +2518,7 @@ boolean TestItem_SCapRawDataTest()
 
 				RawDataMin = g_TestParam_FT5X46.SCapRawDataTest_OFF_Min[0][i];
 				RawDataMax = g_TestParam_FT5X46.SCapRawDataTest_OFF_Max[0][i];
-			//	printk("node_%d Value = %d RawDataMax=%d RawDataMin=%d \n", i, Value, RawDataMax, RawDataMin);
+				printk("node_%d Value = %d RawDataMax=%d RawDataMin=%d \n", i, Value, RawDataMax, RawDataMin);
 				if (iMax < Value)
 					iMax = Value;
 				if (iMin > Value)
@@ -2520,7 +2527,7 @@ boolean TestItem_SCapRawDataTest()
 					btmpresult = false;
 			}
 
-			printk("hjptest--->SCap RawData_Tx:\n");
+			printk("SCap RawData_Tx:\n");
 			bFlag = NeedTxOffVal(regData);
 			SCab_8=bFlag;/*zax 20141116+++++++++++++++++++++++*/
 			for (i = 0; bFlag && (i < SCap_iTxNum); i++) {
@@ -2532,7 +2539,7 @@ boolean TestItem_SCapRawDataTest()
 
 				RawDataMin = g_TestParam_FT5X46.SCapRawDataTest_OFF_Min[1][i];
 				RawDataMax = g_TestParam_FT5X46.SCapRawDataTest_OFF_Max[1][i];
-			//	printk("node_%d Value = %d RawDataMax=%d RawDataMin=%d \n", i, Value, RawDataMax, RawDataMin);
+				printk("node_%d Value = %d RawDataMax=%d RawDataMin=%d \n", i, Value, RawDataMax, RawDataMin);
 				iAvg += Value;
 				if (iMax < Value)
 					iMax = Value;
@@ -2544,7 +2551,7 @@ boolean TestItem_SCapRawDataTest()
 
 			iAvg = iAvg/(SCap_iTxNum + SCap_iRxNum);
 
-			printk("hjptest--->Max SCap RawData: %d, Min SCap RawData: %d, Deviation Value: %d, Average Value: %d\n", iMax, iMin, iMax - iMin, iAvg);
+			printk("Max SCap RawData: %d, Min SCap RawData: %d, Deviation Value: %d, Average Value: %d\n", iMax, iMin, iMax - iMin, iAvg);
 
 		}
 	} else {
@@ -2553,9 +2560,9 @@ boolean TestItem_SCapRawDataTest()
 
 TEST_END:
 	if (btmpresult) {
-		printk("hjptest--->SCap RawData Test is OK\n");
+		printk("SCap RawData Test is OK\n");
 	} else {
-		printk("hjptest--->SCap RawData Test is NG\n");
+		printk("SCap RawData Test is NG\n");
 	}
 	return btmpresult;
 }
@@ -2657,22 +2664,22 @@ static boolean TestItem_UniformityTest(void)
 	bool bResult;
 	boolean bIncludeKey;
 
-	FTS_DBG("hjptest--->==============================Test Item: -----  TestItem_UniformityTest\n");
+	FTS_DBG("==============================Test Item: -----  TestItem_UniformityTest\n");
 	//先判断是否为v3屏体，然后读取0x54的值，并判断与设定的mapping类型是否一致，不一致写入数据
 	//Uniformity test mapping后，mapping前：0x54=1;mapping后：0x54=0;
 	ReCode = ReadReg( 0x53, &chPattern );
-	printk("hjptest--->[1] ReCode = %d \n", ReCode);
+	printk("[1] ReCode = %d \n", ReCode);
 
-	printk(" hjptest--->test result chPattern = %d and ReCode = %d !\n", chPattern, ReCode);
+	printk(" test result chPattern = %d and ReCode = %d !\n", chPattern, ReCode);
 	//printk("20150111  zax0   %d\n",chPattern);
 	if (chPattern == 1)
 	{
 		m_bV3TP = true;
-		printk("hjptest--->m_bV3TP = %d \n", m_bV3TP);
+		printk("m_bV3TP = %d \n", m_bV3TP);
 	}else
 	{
 		m_bV3TP = false;
-		printk("hjptest--->m_bV3TP = %d \n", m_bV3TP);
+		printk("m_bV3TP = %d \n", m_bV3TP);
 	}
 	//printk("20150111  zax1   %d\n",m_bV3TP);
 	memset(TxLinearity, 0, sizeof(TxLinearity));
@@ -2696,7 +2703,7 @@ static boolean TestItem_UniformityTest(void)
 
 	if( g_TestParam_FT5X46.Uniformity_CheckTx )
 	{
-		printk("hjptest--->Uniformity_CheckTx ! \n");
+		printk("Uniformity_CheckTx ! \n");
 		for (  iRow = 0; iRow < iTxNum; ++iRow )
 		{
 			for (  iCol = 1; iCol < iRxNum; ++iCol )
@@ -2761,14 +2768,14 @@ static boolean TestItem_UniformityTest(void)
 			if( !bResult )
 			{
 				
-				printk("hjptest--->Uniformity_CheckTx fail\n");
+				printk("Uniformity_CheckTx fail\n");
 				btmpresult = false;
 			}
 		}
 	}
 	if( g_TestParam_FT5X46.Uniformity_CheckRx )
 	{
-		printk("hjptest--->Uniformity_CheckRx ! \n");
+		printk("Uniformity_CheckRx ! \n");
 		for (  iRow = 1; iRow < iTxNum; ++iRow )
 		{
 			for (  iCol = 0; iCol < iRxNum; ++iCol )
@@ -2834,7 +2841,7 @@ static boolean TestItem_UniformityTest(void)
 			if( !bResult )
 			{
 				
-				printk("hjptest--->Uniformity_CheckRx fail\n");
+				printk("Uniformity_CheckRx fail\n");
 				btmpresult = false;
 			}
 		}
@@ -2845,7 +2852,7 @@ static boolean TestItem_UniformityTest(void)
 	
 	if( g_TestParam_FT5X46.Uniformity_CheckMinMax )
 	{
-		printk("hjptest--->Uniformity_CheckMinMax ! \n");
+		printk("Uniformity_CheckMinMax ! \n");
 		iMin = 100000, iMax = -100000;
 		
 		for (  iRow = 0; iRow < iTxNum; ++iRow )
@@ -2898,7 +2905,7 @@ static boolean TestItem_UniformityTest(void)
 		if( iUniform < g_TestParam_FT5X46.Uniformity_MinMax_Hole )
 		{
 			btmpresult = false;
-			printk("hjptest--->Uniformity_MinMax_Hole fail\n");
+			printk("Uniformity_MinMax_Hole fail\n");
 			
 		}
 
@@ -2910,7 +2917,7 @@ static boolean TestItem_UniformityTest(void)
 		ReCode = WriteReg( REG_MAPPING_SWITCH, strSwitch );
 		if( ReCode != ERROR_CODE_OK)	
 		{
-			printk("hjptest--->WriteReg fail\n");
+			printk("WriteReg fail\n");
 			btmpresult = false;
 		}
 		printk("[3] ReCode = %d \n", ReCode);
@@ -2921,12 +2928,12 @@ static boolean TestItem_UniformityTest(void)
 	if( btmpresult && (ReCode >= ERROR_CODE_OK) )
 	{
 		bTestResult = true;
-		printk("hjptest--->Uniformity test success\n");
+		printk("success\n");
 		
 	}
 	else
 	{
-		printk("hjptest--->Uniformity test fail\n");
+		printk("fail\n");
 		bTestResult = false;
 	
 	}

@@ -22,12 +22,6 @@
 #include <linux/gpio.h>
 #include <linux/wakelock.h>
 
-//#define FTS_APK_DEBUG		//not support now*/
-
-
-
-
-
 
 /* -- dirver configure -- */
 #define CFG_MAX_TOUCH_POINTS	10
@@ -35,26 +29,6 @@
 #define FT_VDD_MAX_UV		3300000
 #define FT_I2C_VCC_MIN_UV	1800000
 #define FT_I2C_VCC_MAX_UV	1800000
-/**add by jinpeng_He +++++**/
-#define ZE550KL		0x0a
-#define ZE551KL		0x0b
-#define ZX550KL		0x05
-#define ZD550KL		0x0e
-#define ZE600KL		0x0c
-#define ZE601KL		0x0f
-#define LCD_VENDOR_CPT_HD		0x30
-#define LCD_VENDOR_TM_HD		0x31
-#define LCD_VENDOR_TM_FHD		0x32
-#define LCD_VENDOR_AUO_FHD		0x33
-#define LCD_VENDOR_CPT_HD_ZE600KL		0x34
-#define LCD_VENDOR_IVO_HD_ZE600KL		0x35
-#define LCD_VENDOR_AUO_FHD_ZE600KL		0x36
-
-
-
-
-/**add by jinpeng_He -----**/
-
 
 #define FT_COORDS_ARR_SIZE	4
 
@@ -62,9 +36,7 @@
 #define FT_PRESS	0x08
 
 #define FTXXXX_NAME	"Ft5x46"
-//#define FTXXXX_NAME "ft5x06_ts"
-
-#define Focal_input_dev_name	"ft5x06_ts"
+#define Focal_input_dev_name	"focal-touchscreen"
 
 
 #define FT_MAX_ID	0x0F
@@ -112,6 +84,16 @@
 #define TOUCH_FW_UPGRADE_INIT		"3"
 /*************IO control setting***************/
 
+/* +++ asus jacob add 20150130 +++ */
+#define TP_TM 0x31
+#define TP_TM_old 0x3b
+#define TP_GIS_AUO 0x63
+#define TP_GIS_BOE 0x64
+#define TP_TOT_AUO 0x43
+#define TP_TOT_BOE 0x44
+
+/* --- asus jacob add 20150130 --- */
+
 #ifdef CONFIG_TOUCHSCREEN_FT5X46
 #define FOCAL_TS_NAME	"Ft5x46"
 #endif
@@ -141,20 +123,15 @@ void ftxxxx_reset_tp(int HighOrLow);
 int ftxxxx_read_tp_id(void);
 u8 get_focal_tp_fw(void);
 void focal_glove_switch(bool plugin);
+void focal_cover_switch(bool plugin);
 void focal_keypad_switch(bool plugin);
 void ftxxxx_Enable_IRQ(struct i2c_client *client, int enable);
-int focal_get_HW_ID(void);
+// int focal_get_HW_ID(void); not support in Android M branch
 void ftxxxx_nosync_irq_disable(struct i2c_client *client);
 void ftxxxx_irq_disable(struct i2c_client *client);
 void ftxxxx_irq_enable(struct i2c_client *client);
+void asus_check_touch_mode(void);
 /* The platform data for the Focaltech ftxxxx touchscreen driver */
-
-//<asus-Jeffery20151202+>
-struct point_first_location {
-	u16 x;	
-	bool filter_flag;
-};
-//<asus-Jeffery20151202->
 
 
 struct ts_event {
@@ -166,7 +143,6 @@ struct ts_event {
 	u8 pressure[CFG_MAX_TOUCH_POINTS];
 	u8 area[CFG_MAX_TOUCH_POINTS];
 	u8 touch_point;
-	u8 Cur_touchpoint;
 };
 
 struct ftxxxx_ts_data {
@@ -177,16 +153,16 @@ struct ftxxxx_ts_data {
 	bool suspend_flag;
 	bool usb_status;
 	bool glove_mode_eable;
-	bool dclick_mode_eable;
-	bool cover_mode_states;
 	bool cover_mode_eable;
+	bool dclick_mode_eable;
 	bool gesture_mode_eable;
 	bool keypad_mode_enable;
+	bool irq_wakeup_eable;
 	u8 gesture_mode_type;
 	bool reset_pin_status;
 	bool irq_lock_status;
-	bool clove_status;
 	spinlock_t irq_lock;
+	atomic_t irq_ref_cnt;
 	struct i2c_client *client;
 	struct input_dev *input_dev;
 	struct ts_event event;
@@ -200,17 +176,11 @@ struct ftxxxx_ts_data {
 	struct workqueue_struct *suspend_resume_wq;
 	struct work_struct resume_work;
 	struct work_struct suspend_work;
-	/********add by jinpeng_He begin***********/
-	u8 fw_ver[3];
-	u32 tp_id_gpio1;
-	u32 tp_id_gpio2;
-	u32 tp_id_value1;
-	u32 tp_id_value2;
-	struct workqueue_struct *update_fw_wq;
-	struct work_struct update_fw_work;
-	u8 lcd_vendor;
-	/********add by jinpeng_He end*****************/
-	
+	struct workqueue_struct *init_check_ic_wq;
+	struct delayed_work init_check_ic_work;
+	struct delayed_work glove_mode_switch_work;
+	struct delayed_work cover_mode_switch_work;
+
 	/* Wakelock Protect */
 	struct wake_lock wake_lock;
 	/* Wakelock Protect */

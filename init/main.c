@@ -76,6 +76,7 @@
 #include <linux/elevator.h>
 #include <linux/sched_clock.h>
 #include <linux/random.h>
+#include <linux/asus_lcd_id.h>
 
 #include <asm/io.h>
 #include <asm/bugs.h>
@@ -370,6 +371,31 @@ EXPORT_SYMBOL(g_ASUS_bootmode);
 __setup("androidboot.mode=", set_boot_mode);
 //--- ASUS_BSP : Younger
 
+//+++ ASUS_BSP: Louis, parsing lcd id from aboot
+int g_asus_lcdID = -1;
+EXPORT_SYMBOL(g_asus_lcdID);
+
+static int set_lcd_id(char *str)
+{
+    if (strcmp("AUO", str) == 0 ) {
+        g_asus_lcdID = ZE500KL_LCD_AUO;
+		printk("LCD ID = AUO\n");
+	} else if (strcmp("TM", str) == 0 ){
+        g_asus_lcdID = ZE500KL_LCD_TIANMA;
+		printk("LCD ID = TM\n");
+	} else if (strcmp("BOE", str) == 0 ){
+        g_asus_lcdID = ZE500KL_LCD_BOE;
+		printk("LCD ID = BOE\n");
+	} else if (strcmp("HSD", str) == 0 ){
+        g_asus_lcdID = A500_HSD;
+		printk("LCD ID = HSD\n");
+	}
+
+	printk("g_asus_lcdID = %d\n" , g_asus_lcdID);
+    return 0;
+}
+__setup("PANEL=", set_lcd_id);
+//--- ASUS_BSP: Louis
 
 /*
  * If set, this is an indication to the drivers that reset the underlying
