@@ -28,23 +28,6 @@
 		bootargs = "sched_enable_hmp=1";
 	};
 
-	firmware: firmware {
-		android {
-			compatible = "android,firmware";
-			fstab {
-				compatible = "android,fstab";
-				system {
-					compatible = "android,system";
-					dev = "/dev/block/platform/soc.0/7824900.sdhci/by-name/system";
-					type = "ext4";
-					mnt_flags = "ro,barrier=1,discard";
-					fsmgr_flags = "wait";
-					status = "ok";
-				};
-			};
-		};
-	};
-
 	aliases {
 		sdhc1 = &sdhc_1; /* SDC1 eMMC slot */
 		sdhc2 = &sdhc_2; /* SDC2 SD card slot */
@@ -355,10 +338,7 @@
 			<  400000000 2>,
 			<  533333000 3>,
 			<  800000000 4>,
-			<  998400000 5>,
-			< 1094400000 6>,
-			< 1152000000 7>,
-			< 1209600000 8>;
+			<  998400000 5>;
 
 		qcom,speed0-bin-v1 =
 			<          0 0>,
@@ -389,10 +369,7 @@
 			<  400000000 2>,
 			<  533333000 3>,
 			<  800000000 4>,
-			<  998400000 5>,
-			< 1094400000 6>,
-			< 1152000000 7>,
-			< 1209600000 8>;
+			<  998400000 5>;
 	};
 
 	cpubw: qcom,cpubw {
@@ -1656,20 +1633,20 @@
 		compatible = "qcom,msm-thermal";
 		qcom,sensor-id = <5>;
 		qcom,poll-ms = <250>;
-		qcom,limit-temp = <70>;
+		qcom,limit-temp = <60>;
 		qcom,temp-hysteresis = <10>;
 		qcom,freq-step = <2>;
 		qcom,freq-control-mask = <0xf>;
 		qcom,core-limit-temp = <80>;
 		qcom,core-temp-hysteresis = <10>;
 		qcom,core-control-mask = <0xe>;
-		qcom,hotplug-temp = <100>;
+		qcom,hotplug-temp = <94>;
 		qcom,hotplug-temp-hysteresis = <15>;
 		qcom,cpu-sensors = "tsens_tz_sensor5", "tsens_tz_sensor5",
 				"tsens_tz_sensor4", "tsens_tz_sensor4";
-		qcom,freq-mitigation-temp = <100>;
+		qcom,freq-mitigation-temp = <94>;
 		qcom,freq-mitigation-temp-hysteresis = <10>;
-		qcom,freq-mitigation-value = <533330>;
+		qcom,freq-mitigation-value = <400000>;
 		qcom,freq-mitigation-control-mask = <0x01>;
 		qcom,online-hotplug-core;
 		qcom,vdd-restriction-temp = <5>;

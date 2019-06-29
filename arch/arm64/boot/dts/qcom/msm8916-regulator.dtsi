@@ -230,6 +230,7 @@
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
 			qcom,init-voltage = <1800000>;
+			regulator-always-on;	/* ASUS BSP Shawn_Huang Always Enable 1.8V for sensor */
 			status = "okay";
 		};
 	};
@@ -240,6 +241,7 @@
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
 			qcom,init-voltage = <1800000>;
+			regulator-always-on;	/* ASUS BSP Shawn_Huang Always Enable 1.8V for sensor */
 			status = "okay";
 		};
 	};
@@ -278,6 +280,7 @@
 			regulator-min-microvolt = <2850000>;
 			regulator-max-microvolt = <2900000>;
 			qcom,init-voltage = <2850000>;
+			regulator-always-on;	/* ASUS BSP Shawn_Huang Always Enable 1.8V for sensor */
 			status = "okay";
 		};
 	};
@@ -295,13 +298,15 @@
 	rpm-regulator-ldoa10 {
 		status = "okay";
 		pm8916_l10: regulator-l10 {
-			regulator-min-microvolt = <2700000>;
-			regulator-max-microvolt = <2800000>;
-			qcom,init-voltage = <2700000>;
+			regulator-min-microvolt = <3000000>;
+			regulator-max-microvolt = <3000000>;
+			qcom,init-voltage = <3000000>;
 			status = "okay";
 		};
 	};
 
+	//ASUS_BSP Deeo +++
+	/*
 	rpm-regulator-ldoa11 {
 		status = "okay";
 		pm8916_l11: regulator-l11 {
@@ -311,6 +316,8 @@
 			status = "okay";
 		};
 	};
+	*/
+	//ASUS_BSP Deeo ---
 
 	rpm-regulator-ldoa12 {
 		status = "okay";

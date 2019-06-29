@@ -185,7 +185,7 @@
 			};
 			sdc2_cd_off: cd_off {
 				drive-strength = <2>;
-				bias-disable;
+				bias-pull-up;
 			};
 		};
 

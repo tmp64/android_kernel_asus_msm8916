@@ -11,6 +11,7 @@
  */
 
 #include "msm8916-ion.dtsi"
+#include "cyanogenmod-pstore.dtsi"
 
 / {
 	memory {

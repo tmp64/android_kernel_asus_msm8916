@@ -38,17 +38,17 @@
 				qcom,pon-type = <0>;
 				qcom,support-reset = <1>;
 				qcom,pull-up = <1>;
-				qcom,s1-timer = <10256>;
-				qcom,s2-timer = <2000>;
-				qcom,s2-type = <1>;
+				qcom,s1-timer = <6720>;
+				qcom,s2-timer = <250>;
+				qcom,s2-type = <7>;
 				linux,code = <116>;
 			};
 
-			/*qcom,pon_2 {
-				qcom,pon-type = <1>;
-				qcom,pull-up = <1>;
-				linux,code = <114>;
-			};*/
+			//qcom,pon_2 {
+			//	qcom,pon-type = <1>;
+			//	qcom,pull-up = <1>;
+			//	linux,code = <114>;
+			//};
 		};
 
 		pm8916_mpps: mpps {
@@ -117,7 +117,7 @@
                         #address-cells = <1>;
                         #size-cells = <1>;
                         qcom,qpnp-rtc-write = <0>;
-                        qcom,qpnp-rtc-alarm-pwrup = <0>;
+                        qcom,qpnp-rtc-alarm-pwrup = <1>;
 
                         qcom,pm8916_rtc_rw@6000 {
                                 reg = <0x6000 0x100>;
@@ -289,6 +289,8 @@
 			qcom,force-s2-in-charging;
 			qcom,report-charger-eoc;
 			qcom,resume-soc = <99>;
+			qcom,batt-aging-comp;
+
 
 			qcom,batt-pres-status@1208 {
 				reg = <0x1208 0x1>;
@@ -315,19 +317,18 @@
 						  "fsm_state_change";
 			};
 		};
-
+		//ASUS_BSP Austin_T : Enable LED driver +++
 		pm8916_green_leds: qcom,leds@a100 {
 			compatible = "qcom,leds-qpnp";
 			reg = <0xa100 0x100>;
 			label = "mpp";
 		};
-
 		pm8916_red_leds: qcom,leds@a300 {
 			compatible = "qcom,leds-qpnp";
 			reg = <0xa300 0x100>;
 			label = "mpp";
-			pwms = <&pm8916_pwm 0 0>;
 		};
+		//ASUS_BSP Austin_T : Enable LED driver ---
 	};
 
 	qcom,pm8916@1 {
@@ -607,6 +608,7 @@
 						   "cdc-vdda-cp";
 
 			qcom,cdc-on-demand-supplies = "cdc-vdd-mic-bias";
+			qcom,cdc-boost-voltage = <5300>;
 		};
 
 		pm8916_tombak_analog: msm8x16_wcd_codec@f100{
