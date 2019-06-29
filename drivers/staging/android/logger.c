@@ -484,8 +484,6 @@ static ssize_t logger_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	ssize_t ret = 0;
 
 	getnstimeofday(&now);
-	if (asusdebug_enable==0x11223344)
-		return 0;
 
 	header.pid = current->tgid;
 	header.tid = current->pid;
