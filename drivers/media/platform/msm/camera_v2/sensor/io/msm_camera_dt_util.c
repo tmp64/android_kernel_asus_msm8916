@@ -14,7 +14,6 @@
 #include "msm_camera_io_util.h"
 #include "msm_camera_i2c_mux.h"
 #include "msm_cci.h"
-#include <linux/kernel.h>
 
 #define CAM_SENSOR_PINCTRL_STATE_SLEEP "cam_suspend"
 #define CAM_SENSOR_PINCTRL_STATE_DEFAULT "cam_default"
@@ -32,7 +31,7 @@ int msm_camera_fill_vreg_params(struct camera_vreg_t *cam_vreg,
 
 	/* Validate input parameters */
 	if (!cam_vreg || !power_setting) {
-		pr_err("%s:%d failed: cam_vreg %pK power_setting %pK", __func__,
+		pr_err("%s:%d failed: cam_vreg %p power_setting %p", __func__,
 			__LINE__,  cam_vreg, power_setting);
 		return -EINVAL;
 	}
@@ -51,7 +50,7 @@ int msm_camera_fill_vreg_params(struct camera_vreg_t *cam_vreg,
 		case CAM_VDIG:
 			for (j = 0; j < num_vreg; j++) {
 				if (!strcmp(cam_vreg[j].reg_name, "cam_vdig")) {
-					pr_err("%s:%d i %d j %d cam_vdig\n",
+					CDBG("%s:%d i %d j %d cam_vdig\n",
 						__func__, __LINE__, i, j);
 					power_setting[i].seq_val = j;
 					break;
@@ -62,7 +61,7 @@ int msm_camera_fill_vreg_params(struct camera_vreg_t *cam_vreg,
 		case CAM_VIO:
 			for (j = 0; j < num_vreg; j++) {
 				if (!strcmp(cam_vreg[j].reg_name, "cam_vio")) {
-					pr_err("%s:%d i %d j %d cam_vio\n",
+					CDBG("%s:%d i %d j %d cam_vio\n",
 						__func__, __LINE__, i, j);
 					power_setting[i].seq_val = j;
 					break;
@@ -73,7 +72,7 @@ int msm_camera_fill_vreg_params(struct camera_vreg_t *cam_vreg,
 		case CAM_VANA:
 			for (j = 0; j < num_vreg; j++) {
 				if (!strcmp(cam_vreg[j].reg_name, "cam_vana")) {
-					pr_err("%s:%d i %d j %d cam_vana\n",
+					CDBG("%s:%d i %d j %d cam_vana\n",
 						__func__, __LINE__, i, j);
 					power_setting[i].seq_val = j;
 					break;
@@ -84,7 +83,7 @@ int msm_camera_fill_vreg_params(struct camera_vreg_t *cam_vreg,
 		case CAM_VAF:
 			for (j = 0; j < num_vreg; j++) {
 				if (!strcmp(cam_vreg[j].reg_name, "cam_vaf")) {
-					pr_err("%s:%d i %d j %d cam_vaf\n",
+					CDBG("%s:%d i %d j %d cam_vaf\n",
 						__func__, __LINE__, i, j);
 					power_setting[i].seq_val = j;
 					break;
@@ -146,8 +145,6 @@ int msm_sensor_get_sub_module_index(struct device_node *of_node,
 		sensor_info->subdev_intf[i] = -1;
 	}
 
-	if( asus_PRJ_ID == 3 )  // ZD550KL
-		pr_err("%s\t qcom,actuator-src \n", __FUNCTION__);
 	src_node = of_parse_phandle(of_node, "qcom,actuator-src", 0);
 	if (!src_node) {
 		CDBG("%s:%d src_node NULL\n", __func__, __LINE__);
@@ -180,8 +177,6 @@ int msm_sensor_get_sub_module_index(struct device_node *of_node,
 		src_node = NULL;
 	}
 
-	if( asus_PRJ_ID == 3 )  // ZD550KL
-		pr_err("%s\t qcom,eeprom-src \n", __FUNCTION__);
 	src_node = of_parse_phandle(of_node, "qcom,eeprom-src", 0);
 	if (!src_node) {
 		CDBG("%s:%d eeprom src_node NULL\n", __func__, __LINE__);
@@ -210,28 +205,22 @@ int msm_sensor_get_sub_module_index(struct device_node *of_node,
 		rc = 0;
 	}
 
-	if( asus_PRJ_ID == 3 )  // ZD550KL
-		pr_err("%s\t qcom,led-flash-src \n", __FUNCTION__);
 	src_node = of_parse_phandle(of_node, "qcom,led-flash-src", 0);
 	if (!src_node) {
-		pr_err("%s:%d src_node NULL\n", __func__, __LINE__);
+		CDBG("%s:%d src_node NULL\n", __func__, __LINE__);
 	} else {
 		rc = of_property_read_u32(src_node, "cell-index", &val);
-		pr_err("%s qcom,led flash cell index %d, rc %d\n", __func__,
+		CDBG("%s qcom,led flash cell index %d, rc %d\n", __func__,
 			val, rc);
 		if (rc < 0) {
 			pr_err("%s:%d failed %d\n", __func__, __LINE__, rc);
 			goto ERROR;
 		}
-		if( asus_PRJ_ID == 3 )  // ZD550KL
-			pr_err("%s\t SUB_MODULE_LED_FLASH: %d  val: %d \n", __FUNCTION__, SUB_MODULE_LED_FLASH, val);
 		sensor_info->subdev_id[SUB_MODULE_LED_FLASH] = val;
 		of_node_put(src_node);
 		src_node = NULL;
 	}
 
-	if( asus_PRJ_ID == 3 )  // ZD550KL
-		pr_err("%s\t qcom,strobe-flash-sd-index \n", __FUNCTION__);
 	rc = of_property_read_u32(of_node, "qcom,strobe-flash-sd-index", &val);
 	if (rc != -EINVAL) {
 		CDBG("%s qcom,strobe-flash-sd-index %d, rc %d\n", __func__,
@@ -240,8 +229,6 @@ int msm_sensor_get_sub_module_index(struct device_node *of_node,
 			pr_err("%s:%d failed rc %d\n", __func__, __LINE__, rc);
 			goto ERROR;
 		}
-		if( asus_PRJ_ID == 3 )  // ZD550KL
-			pr_err("%s\t SUB_MODULE_STROBE_FLASH: %d  val: %d \n", __FUNCTION__, SUB_MODULE_STROBE_FLASH, val);
 		sensor_info->subdev_id[SUB_MODULE_STROBE_FLASH] = val;
 	} else {
 		rc = 0;
@@ -963,31 +950,7 @@ int msm_camera_init_gpio_pin_tbl(struct device_node *of_node,
 	} else {
 		rc = 0;
 	}
-//<asus-leong_un20150327>>>>>>>>>+
-	if( asus_PRJ_ID == 3 )  // ZD550KL
-	{
-		rc = of_property_read_u32(of_node, "qcom,gpio-flash_1-en", &val);
-		if (rc != -EINVAL) {
-			if (rc < 0) {
-				pr_err("%s:%d read qcom,gpio-flash_1-en failed rc %d\n",
-					__func__, __LINE__, rc);
-				goto ERROR;
-			} else if (val >= gpio_array_size) {
-				pr_err("%s:%d qcom,gpio-flash_1-en invalid %d\n",
-					__func__, __LINE__, val);
-				rc = -EINVAL;
-				goto ERROR;
-			}
-			gconf->gpio_num_info->gpio_num[SENSOR_GPIO_FL_1_EN] =
-				gpio_array[val];
-			gconf->gpio_num_info->valid[SENSOR_GPIO_FL_1_EN] = 1;
-			CDBG("%s qcom,gpio-flash_1-en %d\n", __func__,
-				gconf->gpio_num_info->gpio_num[SENSOR_GPIO_FL_1_EN]);
-		} else {
-			rc = 0;
-		}
-	}
-//<asus-leong_un20150327<<<<<<<<<+
+
 	rc = of_property_read_u32(of_node, "qcom,gpio-flash-now", &val);
 	if (rc != -EINVAL) {
 		if (rc < 0) {
@@ -1261,7 +1224,7 @@ int msm_camera_power_up(struct msm_camera_power_ctrl_t *ctrl,
 
 	CDBG("%s:%d\n", __func__, __LINE__);
 	if (!ctrl || !sensor_i2c_client) {
-		pr_err("failed ctrl %pK sensor_i2c_client %pK\n", ctrl,
+		pr_err("failed ctrl %p sensor_i2c_client %p\n", ctrl,
 			sensor_i2c_client);
 		return -EINVAL;
 	}
@@ -1345,12 +1308,14 @@ int msm_camera_power_up(struct msm_camera_power_ctrl_t *ctrl,
 					SENSOR_GPIO_MAX);
 				goto power_up_failed;
 			}
-			//++++ sean_lu@asus.com add "support laser sensor 2nd source"
-			if(g_ASUS_laserID==0 && power_setting->seq_val == CAM_VAF){
-					printk("power up g_ASUS_laserID = %d",g_ASUS_laserID);
-					break;
-			}
-			//---- sean_lu@asus.com add "support laser sensor 2nd source"
+
+			//ASUS_BSP +++ Deka "support laser sensor 2nd source"
+                    	if((g_ASUS_laserID==0 || g_ASUS_laserID ==2) && power_setting->seq_val == CAM_VAF){
+                            printk("Deka power up g_ASUS_laserID = %d",g_ASUS_laserID);
+                            break;
+                        }
+           		//ASUS_BSP --- Deka "support laser sensor 2nd source"
+
 			if (power_setting->seq_val < ctrl->num_vreg)
 				msm_camera_config_single_vreg(ctrl->dev,
 				&ctrl->cam_vreg[power_setting->seq_val],
@@ -1486,7 +1451,7 @@ int msm_camera_power_down(struct msm_camera_power_ctrl_t *ctrl,
 
 	CDBG("%s:%d\n", __func__, __LINE__);
 	if (!ctrl || !sensor_i2c_client) {
-		pr_err("failed ctrl %pK sensor_i2c_client %pK\n", ctrl,
+		pr_err("failed ctrl %p sensor_i2c_client %p\n", ctrl,
 			sensor_i2c_client);
 		return -EINVAL;
 	}
@@ -1543,12 +1508,6 @@ int msm_camera_power_down(struct msm_camera_power_ctrl_t *ctrl,
 						pd->seq_type,
 						pd->seq_val);
 			if (ps) {
-				//++++ sean_lu@asus.com add "support laser sensor 2nd source"
-				if(g_ASUS_laserID==0 && ps->seq_val == CAM_VAF){
-							printk(" power down g_ASUS_laserID = %d",g_ASUS_laserID);
-							break;
-				}
-				//---- sean_lu@asus.com add "support laser sensor 2nd source"
 				if (pd->seq_val < ctrl->num_vreg)
 					msm_camera_config_single_vreg(ctrl->dev,
 					&ctrl->cam_vreg[pd->seq_val],
