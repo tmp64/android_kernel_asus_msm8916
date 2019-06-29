@@ -18,60 +18,10 @@
 #include <linux/regulator/rpm-smd-regulator.h>
 #include <linux/regulator/consumer.h>
 
-//panpan++
-#include <linux/i2c.h>
-#include <linux/input.h>
-#include <linux/input/mt.h>
-#include <linux/slab.h>
-#include <linux/interrupt.h>
-#include <linux/delay.h>
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/gpio.h>
-#include <linux/of_gpio.h>
-#include <linux/regulator/consumer.h>
-#include <linux/firmware.h>
-#include <linux/debugfs.h>
-#include <linux/mutex.h>
-#include <linux/wait.h>
-#include <linux/time.h>
-#include <linux/workqueue.h>
-//#include <linux/input/ft5x06_ts.h>
-#include <linux/fs.h>
-#include <asm/uaccess.h>
-#include <linux/fs.h>
-#include <linux/device.h>
-#include <linux/proc_fs.h>
-#include <linux/seq_file.h>
-//panpan--
-
-
-//panpan++
-/*static int create_rear_resolution_file(void);
-//static void remove_rear_resolution_file(void);
-static  ssize_t rear_resolution_read_file(struct device *dev,
-					struct device_attribute *attr, char *buf);
-static DEVICE_ATTR(rear_resolution,S_IRUGO|S_IWUSR, rear_resolution_read_file,NULL);
-
-static struct kobject *rear_resolution;
-
-
-//panpan--*/
-
-
-//panpan++
-static void create_rear_resolutioncamera_proc_file(void);
-static int read_rear_resolution_proc_file(struct seq_file *buf, void *v);
-static uint16_t sensorid_rear;
-
-
-
-//panpan--
-
-
-
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
+
+int isPowerup=0;
 
 static struct v4l2_file_operations msm_sensor_v4l2_subdev_fops;
 static void msm_sensor_adjust_mclk(struct msm_camera_power_ctrl_t *ctrl)
@@ -461,38 +411,36 @@ static struct msm_cam_clk_info cam_8974_clk_info[] = {
 	[SENSOR_CAM_MCLK] = {"cam_src_clk", 24000000},
 	[SENSOR_CAM_CLK] = {"cam_clk", 0},
 };
-// <ASUS-Hollie20150422+>
-extern  void asus_actuator_close(void);
-int isPowerup=0;
-// <ASUS-Hollie20150422->
+
 int msm_sensor_power_down(struct msm_sensor_ctrl_t *s_ctrl)
 {
 	struct msm_camera_power_ctrl_t *power_info;
 	enum msm_camera_device_type_t sensor_device_type;
 	struct msm_camera_i2c_client *sensor_i2c_client;
+	int rc = 0;
 
+	printk("%s : E\n", __func__);
 	if (!s_ctrl) {
-		pr_err("%s:%d failed: s_ctrl %pK\n",
+		pr_err("%s:%d failed: s_ctrl %p\n",
 			__func__, __LINE__, s_ctrl);
 		return -EINVAL;
 	}
-	// <ASUS-Hollie20150422+>
-	if(isPowerup){
-		asus_actuator_close();
-	}
-	// <ASUS-Hollie20150422->
+
 	power_info = &s_ctrl->sensordata->power_info;
 	sensor_device_type = s_ctrl->sensor_device_type;
 	sensor_i2c_client = s_ctrl->sensor_i2c_client;
 
 	if (!power_info || !sensor_i2c_client) {
-		pr_err("%s:%d failed: power_info %pK sensor_i2c_client %pK\n",
+		pr_err("%s:%d failed: power_info %p sensor_i2c_client %p\n",
 			__func__, __LINE__, power_info, sensor_i2c_client);
 		return -EINVAL;
 	}
-	isPowerup=0; // <ASUS-Hollie20150422+>
-	return msm_camera_power_down(power_info, sensor_device_type,
+	isPowerup=0;
+	rc = msm_camera_power_down(power_info, sensor_device_type,
 		sensor_i2c_client);
+
+	printk("%s : X\n", __func__);
+	return rc;
 }
 
 int msm_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
@@ -504,8 +452,9 @@ int msm_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 	const char *sensor_name;
 	uint32_t retry = 0;
 
+	printk("%s : E\n", __func__);
 	if (!s_ctrl) {
-		pr_err("%s:%d failed: %pK\n",
+		pr_err("%s:%d failed: %p\n",
 			__func__, __LINE__, s_ctrl);
 		return -EINVAL;
 	}
@@ -517,20 +466,20 @@ int msm_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 
 	if (!power_info || !sensor_i2c_client || !slave_info ||
 		!sensor_name) {
-		pr_err("%s:%d failed: %pK %pK %pK %pK\n",
+		pr_err("%s:%d failed: %p %p %p %p\n",
 			__func__, __LINE__, power_info,
 			sensor_i2c_client, slave_info, sensor_name);
 		return -EINVAL;
 	}
-
 	if (s_ctrl->set_mclk_23880000)
 		msm_sensor_adjust_mclk(power_info);
 
 	for (retry = 0; retry < 3; retry++) {
 		rc = msm_camera_power_up(power_info, s_ctrl->sensor_device_type,
 			sensor_i2c_client);
-		if (rc < 0)
+		if (rc < 0) {
 			return rc;
+		}
 		rc = msm_sensor_check_id(s_ctrl);
 		if (rc < 0) {
 			msm_camera_power_down(power_info,
@@ -541,11 +490,11 @@ int msm_sensor_power_up(struct msm_sensor_ctrl_t *s_ctrl)
 			break;
 		}
 	}
-	// <ASUS-Hollie20150422+>
+
 	if(rc==0){
 		isPowerup=1;
 	}
-	// <ASUS-Hollie20150422->
+	printk("%s : rc=(%d) X\n", __func__, rc);
 	return rc;
 }
 
@@ -558,7 +507,7 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 	const char *sensor_name;
 
 	if (!s_ctrl) {
-		pr_err("%s:%d failed: %pK\n",
+		pr_err("%s:%d failed: %p\n",
 			__func__, __LINE__, s_ctrl);
 		return -EINVAL;
 	}
@@ -567,7 +516,7 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 	sensor_name = s_ctrl->sensordata->sensor_name;
 
 	if (!sensor_i2c_client || !slave_info || !sensor_name) {
-		pr_err("%s:%d failed: %pK %pK %pK\n",
+		pr_err("%s:%d failed: %p %p %p\n",
 			__func__, __LINE__, sensor_i2c_client, slave_info,
 			sensor_name);
 		return -EINVAL;
@@ -617,82 +566,6 @@ static int msm_sensor_get_af_status(struct msm_sensor_ctrl_t *s_ctrl,
 	set the status in the *status variable accordingly*/
 	return 0;
 }
-
-
-
-//panpan++
-int msm_sensor_testi2c(struct msm_sensor_ctrl_t *s_ctrl)
-{
-	int rc;
-	struct msm_camera_power_ctrl_t *power_info;
-	struct msm_camera_i2c_client *sensor_i2c_client;
-	struct msm_camera_slave_info *slave_info;
-	const char *sensor_name;
-	uint16_t chipid;
-	uint32_t retry = 0;
-
-	if (!s_ctrl) {
-		pr_err("%s:%d failed: %p\n",
-			__func__, __LINE__, s_ctrl);
-		return -EINVAL;
-	}
-
-	power_info = &s_ctrl->sensordata->power_info;
-	sensor_i2c_client = s_ctrl->sensor_i2c_client;
-	slave_info = s_ctrl->sensordata->slave_info;
-	sensor_name = s_ctrl->sensordata->sensor_name;
-
-	if (!power_info || !sensor_i2c_client || !slave_info ||
-		!sensor_name) {
-		pr_err("%s:%d failed: %p %p %p %p\n",
-			__func__, __LINE__, power_info,
-			sensor_i2c_client, slave_info, sensor_name);
-		return -EINVAL;
-	}
-
-	rc = msm_camera_power_up(power_info, s_ctrl->sensor_device_type,
-			sensor_i2c_client);
-		if (rc < 0)
-			{
-
-		     pr_err("%s: %s: read id failed\n", __func__, sensor_name);
-				return rc;
-			}
-	for (retry = 0; retry < 5; retry++) {
-	  rc = sensor_i2c_client->i2c_func_tbl->i2c_read(
-		sensor_i2c_client, 0x0100,
-		&chipid, MSM_CAMERA_I2C_WORD_DATA);
-		if (rc < 0) {
-
-			msm_camera_power_down(power_info,
-				s_ctrl->sensor_device_type, sensor_i2c_client);
-			msleep(20);
-			return -EINVAL;
-		}
-
-		rc = sensor_i2c_client->i2c_func_tbl->i2c_write(
-		sensor_i2c_client, 0x0100,
-		chipid, MSM_CAMERA_I2C_WORD_DATA);
-		if (rc < 0) {
-
-			msm_camera_power_down(power_info,
-				s_ctrl->sensor_device_type, sensor_i2c_client);
-			msleep(20);
-			return -EINVAL;
-		}
-	}
-	msm_camera_power_down(power_info,
-				s_ctrl->sensor_device_type, sensor_i2c_client);
-			msleep(20);
-	return rc;
-}
-
-
-
-
-//panpan--
-
-
 
 static long msm_sensor_subdev_ioctl(struct v4l2_subdev *sd,
 			unsigned int cmd, void *arg)
@@ -905,7 +778,7 @@ static int msm_sensor_config32(struct msm_sensor_ctrl_t *s_ctrl,
 			pr_err("%s:%d: i2c_read failed\n", __func__, __LINE__);
 			break;
 		}
-		if (copy_to_user((void *)compat_ptr((uint32_t)cdata->cfg.setting+offsetof(struct msm_camera_i2c_read_config,data)),
+		if (copy_to_user(&read_config.data,
 			(void *)&local_data, sizeof(uint16_t))) {
 			pr_err("%s:%d copy failed\n", __func__, __LINE__);
 			rc = -EFAULT;
@@ -1067,7 +940,8 @@ static int msm_sensor_config32(struct msm_sensor_ctrl_t *s_ctrl,
 		break;
 	}
 	case CFG_SET_STOP_STREAM:
-		usleep(49000);
+			printk("%s : CFG_SET_STOP_STREAM\n", __func__);
+			usleep(49000);
 		break;
 	default:
 		rc = -EFAULT;
@@ -1457,7 +1331,8 @@ int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 		break;
 	}
 	case CFG_SET_STOP_STREAM:
-		usleep(49000);
+			printk("%s : CFG_SET_STOP_STREAM\n", __func__);
+			usleep(49000);
 		break;
 	default:
 		rc = -EFAULT;
@@ -1564,7 +1439,7 @@ int32_t msm_sensor_platform_probe(struct platform_device *pdev,
 	uint32_t session_id;
 	unsigned long mount_pos = 0;
 	s_ctrl->pdev = pdev;
-	CDBG("%s called data %pK\n", __func__, data);
+	CDBG("%s called data %p\n", __func__, data);
 	CDBG("%s pdev name %s\n", __func__, pdev->id_entry->name);
 	if (pdev->dev.of_node) {
 		rc = msm_sensor_get_dt_data(pdev->dev.of_node, s_ctrl);
@@ -1585,10 +1460,6 @@ int32_t msm_sensor_platform_probe(struct platform_device *pdev,
 	cci_client = s_ctrl->sensor_i2c_client->cci_client;
 	cci_client->cci_subdev = msm_cci_get_subdev();
 	cci_client->cci_i2c_master = s_ctrl->cci_i2c_master;
-	//lew++
-	if(s_ctrl->sensordata->slave_info->sensor_slave_addr==0x6d)
-		s_ctrl->sensordata->slave_info->sensor_slave_addr=0x6c;
-	//lew--
 	cci_client->sid =
 		s_ctrl->sensordata->slave_info->sensor_slave_addr >> 1;
 	cci_client->retries = 3;
@@ -1620,22 +1491,6 @@ int32_t msm_sensor_platform_probe(struct platform_device *pdev,
 		return rc;
 	}
 
-	//Lew add for diff 550KG and 550KL
-	if(s_ctrl->sensordata->slave_info->sensor_slave_addr==0x6c){
-		//Clark need to add the proc info here
-		pr_err("Lew debug our sensor is %s\n",s_ctrl->sensordata->sensor_name);
-		if(!strcmp(s_ctrl->sensordata->sensor_name,"t4k35"))
-			sensorid_rear=0x1481;
-		if(!strcmp(s_ctrl->sensordata->sensor_name,"t4k37"))
-			sensorid_rear=0x1c21;
-		//panpan++
-		//create_rear_resolution_file();
-		create_rear_resolutioncamera_proc_file();
-		//panpan--
-		s_ctrl->func_tbl->sensor_power_down(s_ctrl);
-		return rc;
-	}
-	//Lew add end
 	pr_info("%s %s probe succeeded\n", __func__,
 		s_ctrl->sensordata->sensor_name);
 	v4l2_subdev_init(&s_ctrl->msm_sd.sd,
@@ -1805,13 +1660,13 @@ int32_t msm_sensor_init_default_params(struct msm_sensor_ctrl_t *s_ctrl)
 
 	/* Validate input parameters */
 	if (!s_ctrl) {
-		pr_err("%s:%d failed: invalid params s_ctrl %pK\n", __func__,
+		pr_err("%s:%d failed: invalid params s_ctrl %p\n", __func__,
 			__LINE__, s_ctrl);
 		return -EINVAL;
 	}
 
 	if (!s_ctrl->sensor_i2c_client) {
-		pr_err("%s:%d failed: invalid params sensor_i2c_client %pK\n",
+		pr_err("%s:%d failed: invalid params sensor_i2c_client %p\n",
 			__func__, __LINE__, s_ctrl->sensor_i2c_client);
 		return -EINVAL;
 	}
@@ -1820,7 +1675,7 @@ int32_t msm_sensor_init_default_params(struct msm_sensor_ctrl_t *s_ctrl)
 	s_ctrl->sensor_i2c_client->cci_client = kzalloc(sizeof(
 		struct msm_camera_cci_client), GFP_KERNEL);
 	if (!s_ctrl->sensor_i2c_client->cci_client) {
-		pr_err("%s:%d failed: no memory cci_client %pK\n", __func__,
+		pr_err("%s:%d failed: no memory cci_client %p\n", __func__,
 			__LINE__, s_ctrl->sensor_i2c_client->cci_client);
 		return -ENOMEM;
 	}
@@ -1854,7 +1709,7 @@ int32_t msm_sensor_init_default_params(struct msm_sensor_ctrl_t *s_ctrl)
 	/* Initialize clock info */
 	clk_info = kzalloc(sizeof(cam_8974_clk_info), GFP_KERNEL);
 	if (!clk_info) {
-		pr_err("%s:%d failed no memory clk_info %pK\n", __func__,
+		pr_err("%s:%d failed no memory clk_info %p\n", __func__,
 			__LINE__, clk_info);
 		rc = -ENOMEM;
 		goto FREE_CCI_CLIENT;
@@ -1876,87 +1731,3 @@ FREE_CCI_CLIENT:
 	kfree(cci_client);
 	return rc;
 }
-
-//panpan++
-/*static int create_rear_resolution_file(void)
-{
-	int ret;
-				rear_resolution = kobject_create_and_add("rear_resolution", NULL) ;
-				if (rear_resolution == NULL)
-				{
-					printk("%s: subsystem_register failed\n", __func__);
-					return -ENOMEM;
-				}
-
-				ret = sysfs_create_file(rear_resolution, &dev_attr_rear_resolution.attr);
-				if (ret)
-				{
-					printk("%s: sysfs_create failed\n", __func__);
-					return ret;
-				}
-				return 0;
-
-
-}
-
-static void remove_rear_resolution_file(void)
-{
-	sysfs_remove_file(rear_camera_resolution, &dev_attr_rear_resolution.attr);
-		kobject_del(rear_camera_resolution);
-
-}
-static  ssize_t rear_resolution_read_file(struct device *dev,
-					struct device_attribute *attr, char *buf)
-{
-	if(sensorid_rear==0x1c21)
-	return sprintf(buf,"13M\n");
-	else
-	return sprintf(buf,"8M\n");
-
-}*/
-
-//panpan--
-
-
-//panpan ++
-#define	REAR_RESOLUTION_PROC_FILE	"driver/RearResolution"
-
-static struct proc_dir_entry *status_proc_file;
-
-static int read_rear_resolution_proc_file(struct seq_file *buf, void *v)
-{
-	if(sensorid_rear==0x1c21)
-	return seq_printf(buf,"13M\n");
-	else
-	return seq_printf(buf,"8M\n");
-
-	return 0;
-}
-
-
-static int rear_resolution_proc_open(struct inode *inode, struct  file *file)
-{
-    return single_open(file, read_rear_resolution_proc_file, NULL);
-}
-
-
-static const struct file_operations rear_resolution_fops = {
-	.owner = THIS_MODULE,
-	.open = rear_resolution_proc_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
-
-static void create_rear_resolutioncamera_proc_file()
-{
-	status_proc_file = proc_create(REAR_RESOLUTION_PROC_FILE, 0444, NULL, &rear_resolution_fops);
-			if(status_proc_file) {
-				CDBG("%s sucessed!\n", __func__);
-			} else {
-				pr_err("%s failed!\n", __func__);
-			}
-
-}
-
-//panpan--

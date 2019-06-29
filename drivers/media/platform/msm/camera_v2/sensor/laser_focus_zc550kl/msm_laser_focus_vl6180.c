@@ -21,11 +21,12 @@
 #include <linux/fs.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/of_gpio.h>
 
 //DEFINE_MSM_MUTEX(msm_laser_focus_mutex);
 
 #undef CDBG
-#define CDBG(fmt, args...) //pr_info(fmt, ##args)
+#define CDBG(fmt, args...) pr_info(fmt, ##args)
 
 //static struct v4l2_file_operations msm_laser_focus_v4l2_subdev_fops;
 static int32_t VL6180x_power_up(struct msm_laser_focus_ctrl_t *a_ctrl);
@@ -35,13 +36,20 @@ static int VL6180x_init(struct msm_laser_focus_ctrl_t *a_ctrl);
 static int VL6180x_deinit(struct msm_laser_focus_ctrl_t *a_ctrl);
 
 struct msm_laser_focus_ctrl_t *vl6180x_t = NULL;
+bool vl6180x_camera_on_flag = false;
+struct mutex vl6180x_mutex;
+int vl6180x_check_status = 0;
+
+static int laser_focus_enforce_ctrl = 0;
 
 /*For LaserFocus STATUS Controll+++*/
 #define	STATUS_PROC_FILE				"driver/LaserFocus_Status"
+#define	STATUS_PROC_FILE_FOR_CAMERA	"driver/LaserFocus_Status_For_Camera"
 #define	DEVICE_TURN_ON_FILE			"driver/LaserFocus_on"
 #define	DEVICE_GET_VALUE				"driver/LaserFocus_value"
 #define	DEVICE_SET_CALIBRATION			"driver/LaserFocus_CalStart"
 #define	DEVICE_DUMP_REGISTER_VALUE	"driver/LaserFocus_regiser_dump"
+#define	LASER_FOCUS_ENFORCE			"driver/LaserFocus_enforce"
 static struct proc_dir_entry *status_proc_file;
 static struct proc_dir_entry *device_trun_on_file;
 static struct proc_dir_entry *device_get_value_file;
@@ -187,45 +195,14 @@ static int VL6180x_device_UpscaleRegInit(void)
 	VL6180x_WrByte(0x001C, 0x3F);
 
 	/* Apply calibration data */
-	if (vl6180x_t->device_state == MSM_LASER_FOCUS_DEVICE_APPLY_CALIBRATION || 
-		vl6180x_t->device_state == MSM_LASER_FOCUS_DEVICE_INIT_CCI)	{
-		/* Read & Apply Calibration data */
-		if(Laser_Forcus_sysfs_read_offset() != -ENOENT
-			&& Laser_Forcus_sysfs_read_offset() != -ENXIO
-			&& Laser_Forcus_sysfs_read_offset() != -EINVAL)
-		{
-			vl6180x_t->laser_focus_offset_value = Laser_Forcus_sysfs_read_offset();
-			VL6180x_WrByte(SYSRANGE_PART_TO_PART_RANGE_OFFSET, vl6180x_t->laser_focus_offset_value);
-		}
-		else
-		{
-			// recount p2p calibration offset to fit ranging ratio
-			p2p_offset = VL6180x_RdByte(0x0024);
-
-			if( p2p_offset > 0x7F )
-			{
-				p2p_offset -= 0xFF;
-			}
-			p2p_offset /= 3;
-			p2p_offset += 1;
-
-			VL6180x_WrByte(0x24, p2p_offset);
-		}
-		
-		if(Laser_Forcus_sysfs_read_cross_talk_offset() != -ENOENT
-			&& Laser_Forcus_sysfs_read_cross_talk_offset() != -ENXIO
-			&& Laser_Forcus_sysfs_read_cross_talk_offset() != -EINVAL)
-		{
-			vl6180x_t->laser_focus_cross_talk_offset_value = Laser_Forcus_sysfs_read_cross_talk_offset();
-			VL6180x_WrDWord(SYSRANGE_CROSSTALK_COMPENSATION_RATE, vl6180x_t->laser_focus_cross_talk_offset_value);
-		}
-		
-		//vl6180x_t->laser_focus_offset_value = Laser_Forcus_sysfs_read_offset();
-		//vl6180x_t->laser_focus_cross_talk_offset_value = Laser_Forcus_sysfs_read_cross_talk_offset();
+	if (vl6180x_t->device_state == MSM_LASER_FOCUS_DEVICE_APPLY_CALIBRATION)	{
+		/* Read Calibration data */
+		vl6180x_t->laser_focus_offset_value = Laser_Forcus_sysfs_read_offset();
+		vl6180x_t->laser_focus_cross_talk_offset_value = Laser_Forcus_sysfs_read_cross_talk_offset();
 
 		/* Apply Calibration value */
-		//VL6180x_WrByte(SYSRANGE_PART_TO_PART_RANGE_OFFSET, vl6180x_t->laser_focus_offset_value);
-		//VL6180x_WrDWord(SYSRANGE_CROSSTALK_COMPENSATION_RATE, vl6180x_t->laser_focus_cross_talk_offset_value);
+		VL6180x_WrByte(SYSRANGE_PART_TO_PART_RANGE_OFFSET, vl6180x_t->laser_focus_offset_value);
+		VL6180x_WrDWord(SYSRANGE_CROSSTALK_COMPENSATION_RATE, vl6180x_t->laser_focus_cross_talk_offset_value);
 	}
 	else{
 		// recount p2p calibration offset to fit ranging ratio
@@ -304,14 +281,25 @@ static ssize_t ATD_VL6180x_device_enable_write(struct file *filp, const char __u
 	}
 	switch (val) {
 	case MSM_LASER_FOCUS_DEVICE_OFF:
-		rc = VL6180x_power_down(vl6180x_t);
+		mutex_lock(&vl6180x_mutex);
+		if(vl6180x_camera_on_flag){
+			CDBG("%s: %d Camera is running, do nothing!!\n ", __func__, __LINE__);
+			mutex_unlock(&vl6180x_mutex);
+			break;
+		}
 		rc = VL6180x_deinit(vl6180x_t);
+		rc = VL6180x_power_down(vl6180x_t);
 		vl6180x_t->device_state = MSM_LASER_FOCUS_DEVICE_OFF;
+		mutex_unlock(&vl6180x_mutex);
 		break;
 	case MSM_LASER_FOCUS_DEVICE_APPLY_CALIBRATION:
+		if(vl6180x_camera_on_flag){
+			CDBG("%s: %d Camera is running, do nothing!!\n ", __func__, __LINE__);
+			break;
+		}
 		if (vl6180x_t->device_state != MSM_LASER_FOCUS_DEVICE_OFF)	{
-			rc = VL6180x_power_down(vl6180x_t);
 			rc = VL6180x_deinit(vl6180x_t);
+			rc = VL6180x_power_down(vl6180x_t);
 			vl6180x_t->device_state = MSM_LASER_FOCUS_DEVICE_OFF;
 		}
 		vl6180x_t->device_state = MSM_LASER_FOCUS_DEVICE_APPLY_CALIBRATION;
@@ -321,7 +309,8 @@ static ssize_t ATD_VL6180x_device_enable_write(struct file *filp, const char __u
 		if (rc < 0)	{
 			printk("%s Device trun on fail !!\n", __func__);
 			vl6180x_t->device_state = MSM_LASER_FOCUS_DEVICE_OFF;
-			return -EIO;
+			//return -EIO;
+			goto DEVICE_TRUE_ON_ERROR;
 		} else	{
 			vl6180x_t->device_state = MSM_LASER_FOCUS_DEVICE_APPLY_CALIBRATION;
 			printk("%s Init Device (%d)\n", __func__, vl6180x_t->device_state);
@@ -332,9 +321,13 @@ static ssize_t ATD_VL6180x_device_enable_write(struct file *filp, const char __u
 		}
 		break;
 	case MSM_LASER_FOCUS_DEVICE_NO_APPLY_CALIBRATION:
+		if(vl6180x_camera_on_flag){
+			CDBG("%s: %d Camera is running, do nothing!!\n ", __func__, __LINE__);
+			break;
+		}
 		if (vl6180x_t->device_state != MSM_LASER_FOCUS_DEVICE_OFF)	{
-			rc = VL6180x_power_down(vl6180x_t);
 			rc = VL6180x_deinit(vl6180x_t);
+			rc = VL6180x_power_down(vl6180x_t);
 			vl6180x_t->device_state = MSM_LASER_FOCUS_DEVICE_OFF;
 		}
 		vl6180x_t->device_state = MSM_LASER_FOCUS_DEVICE_NO_APPLY_CALIBRATION;
@@ -344,7 +337,8 @@ static ssize_t ATD_VL6180x_device_enable_write(struct file *filp, const char __u
 		if (rc < 0)	{
 			printk("%s Device trun on fail !!\n", __func__);
 			vl6180x_t->device_state = MSM_LASER_FOCUS_DEVICE_OFF;
-			return -EIO;
+			//return -EIO;
+			goto DEVICE_TRUE_ON_ERROR;
 		} else	{
 			vl6180x_t->device_state = MSM_LASER_FOCUS_DEVICE_NO_APPLY_CALIBRATION;
 			printk("%s Init Device (%d)\n", __func__, vl6180x_t->device_state);
@@ -355,31 +349,51 @@ static ssize_t ATD_VL6180x_device_enable_write(struct file *filp, const char __u
 		}
 		break;
 	case MSM_LASER_FOCUS_DEVICE_INIT_CCI:
+		vl6180x_t->device_state = MSM_LASER_FOCUS_DEVICE_INIT_CCI;
+		rc = VL6180x_init(vl6180x_t);
+		rc = VL6180x_WaitDeviceBooted();
+		if(rc < 0){
+			printk("%s Device trun on fail !!\n", __func__);
+			vl6180x_t->device_state = MSM_LASER_FOCUS_DEVICE_OFF;
+			return -EIO;
+		} else {
 			vl6180x_t->device_state = MSM_LASER_FOCUS_DEVICE_INIT_CCI;
-			rc = VL6180x_init(vl6180x_t);
-			rc = VL6180x_WaitDeviceBooted();
-			if(rc < 0){
-				printk("%s Device trun on fail !!\n", __func__);
-				vl6180x_t->device_state = MSM_LASER_FOCUS_DEVICE_OFF;
-				return -EIO;
-			} else {
-				vl6180x_t->device_state = MSM_LASER_FOCUS_DEVICE_INIT_CCI;
-				printk("%s Init Device (%d)\n", __func__, vl6180x_t->device_state);
-				VL6180x_device_UpscaleRegInit();
+			printk("%s Init Device (%d)\n", __func__, vl6180x_t->device_state);
+			VL6180x_device_UpscaleRegInit();
 
-				/* Setting SYSRANGE_START to 0x01 */
-				VL6180x_WrByte(SYSRANGE_START, 0X01);
-			}
-			break;
-		case MSM_LASER_FOCUS_DEVICE_DEINIT_CCI:
-			rc = VL6180x_deinit(vl6180x_t);
-			vl6180x_t->device_state = MSM_LASER_FOCUS_DEVICE_DEINIT_CCI;
-			break;
+			/* Setting SYSRANGE_START to 0x01 */
+			VL6180x_WrByte(SYSRANGE_START, 0X01);
+		}
+
+		vl6180x_camera_on_flag = true;
+			
+		break;
+	case MSM_LASER_FOCUS_DEVICE_DEINIT_CCI:
+		mutex_lock(&vl6180x_mutex);
+		rc = VL6180x_deinit(vl6180x_t);
+		vl6180x_t->device_state = MSM_LASER_FOCUS_DEVICE_DEINIT_CCI;
+		vl6180x_camera_on_flag = false;
+		mutex_unlock(&vl6180x_mutex);
+			
+		break;
 	default:
 		printk("%s commond fail !!\n", __func__);
 		break;
 	}
 	return len;
+	
+DEVICE_TRUE_ON_ERROR:
+	rc = VL6180x_deinit(vl6180x_t);
+	if (rc < 0) {
+		//kfree(vl6180x_t);
+		pr_err("%s VL6180x_deinit failed %d\n", __func__, __LINE__);
+	}
+	rc = VL6180x_power_down(vl6180x_t);
+	if (rc < 0) {
+		//kfree(vl6180x_t);
+		pr_err("%s VL6180x_power_down failed %d\n", __func__, __LINE__);
+	}
+	return -EIO;
 }
 
 static int ATD_VL6180x_device_enable_read(struct seq_file *buf, void *v)
@@ -404,9 +418,10 @@ static const struct file_operations ATD_laser_focus_device_enable_fops = {
 
 static int ATD_VL6180x_device_read_range(void)
 {
-	uint16_t RawRange, Data_value;
-	int status, i = 0;
+	uint16_t RawRange, Data_value, Data_value2;
+	int status, i=0;
 	struct msm_camera_i2c_client *sensor_i2c_client;
+	
 	/* Setting i2c client */
 	sensor_i2c_client = vl6180x_t->i2c_client;
 	if (!sensor_i2c_client) {
@@ -461,8 +476,16 @@ static int ATD_VL6180x_device_read_range(void)
 #endif
 
 	/* Get Sensor detect distance */
-	RawRange = 0;
-	for (i = 0; i <10; i++)	{
+	RawRange = 255;
+	for(i=0; i < 200; i++)	{
+		/* [Debug] check register 0x4D */
+		Data_value2 = 0x00;
+		status = sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, RESULT_RANGE_STATUS, &Data_value2, MSM_CAMERA_I2C_BYTE_DATA);
+		if (status < 0) {
+			pr_err("%s: read register(0x%x) failed\n", __func__, RESULT_RANGE_STATUS);
+			return status;
+		}
+		
 		/* Check RESULT_INTERRUPT_STATUS_GPIO */
 		Data_value = 0x00;
 		status = sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, RESULT_INTERRUPT_STATUS_GPIO, &Data_value, MSM_CAMERA_I2C_BYTE_DATA);
@@ -470,9 +493,11 @@ static int ATD_VL6180x_device_read_range(void)
 			pr_err("%s: read register(0x%x) failed\n", __func__, RESULT_INTERRUPT_STATUS_GPIO);
 			return status;
 		}
-		CDBG("%s: read register(0x%x) : 0x%x \n", __func__, RESULT_INTERRUPT_STATUS_GPIO, Data_value);
+		//CDBG("%s: read register(0x%x) : 0x%x \n", __func__, RESULT_INTERRUPT_STATUS_GPIO, Data_value);
+		CDBG("%s: read register(0x%x) : 0x%x ; read register(0x%x) : 0x%x \n", __func__, RESULT_INTERRUPT_STATUS_GPIO, Data_value, RESULT_RANGE_STATUS, Data_value2);
 
-		if (Data_value == RES_INT_STAT_GPIO_NEW_SAMPLE_READY)	{
+		if ((Data_value&0x07) == RES_INT_STAT_GPIO_NEW_SAMPLE_READY)	{
+			msleep(1);
 			status = sensor_i2c_client->i2c_func_tbl->i2c_read(sensor_i2c_client, RESULT_RANGE_VAL, &RawRange, MSM_CAMERA_I2C_BYTE_DATA);
 			if (status < 0) {
 				pr_err("%s: read register(0x%x) failed\n", __func__, RESULT_RANGE_VAL);
@@ -482,7 +507,6 @@ static int ATD_VL6180x_device_read_range(void)
 				break;
 			}
 		}
-		msleep(20);
 	}
 
 	/* Setting SYSTEM_INTERRUPT_CLEAR to 0x01 */
@@ -501,10 +525,18 @@ static int ATD_VL6180x_device_get_range_read(struct seq_file *buf, void *v)
 {
 	int RawRange = 0;
 
-	if (vl6180x_t->device_state == MSM_LASER_FOCUS_DEVICE_OFF) {
+	mutex_lock(&vl6180x_mutex);
+	if (vl6180x_t->device_state == MSM_LASER_FOCUS_DEVICE_OFF ||
+		vl6180x_t->device_state == MSM_LASER_FOCUS_DEVICE_DEINIT_CCI) {
 		pr_err("%s:%d Device without turn on: (%d) \n", __func__, __LINE__, vl6180x_t->device_state);
 		seq_printf(buf, "%d\n", 0);
-		//return -EBUSY;
+		mutex_unlock(&vl6180x_mutex);
+		return -EBUSY;
+	}
+
+	if(laser_focus_enforce_ctrl != 0){
+		seq_printf(buf, "%d\n", laser_focus_enforce_ctrl);
+		mutex_unlock(&vl6180x_mutex);
 		return 0;
 	}
 	
@@ -519,6 +551,7 @@ static int ATD_VL6180x_device_get_range_read(struct seq_file *buf, void *v)
 	}
 
 	seq_printf(buf, "%d\n", RawRange);
+	mutex_unlock(&vl6180x_mutex);
 
 	return 0;
 }
@@ -542,15 +575,20 @@ static int ATD_VL6180x_device_clibration_offset(void)
 	uint16_t distance;
 	int16_t offset;
 
-	if (vl6180x_t->device_state == MSM_LASER_FOCUS_DEVICE_OFF) {
+	mutex_lock(&vl6180x_mutex);
+	
+	if (vl6180x_t->device_state == MSM_LASER_FOCUS_DEVICE_OFF ||
+		vl6180x_t->device_state == MSM_LASER_FOCUS_DEVICE_DEINIT_CCI) {
 		pr_err("%s:%d Device without turn on: (%d) \n", __func__, __LINE__, vl6180x_t->device_state);
+		mutex_unlock(&vl6180x_mutex);
 		return -EBUSY;
 	}
 
 	/* Set calibratioon Setting */
 	/*VL6180x_WrByte(0x0097, 0xFD);
 	VL6180x_WrByte(0x00A3, 0x3C);
-	VL6180x_WrByte(0x00BB, 0x3C);*/
+	VL6180x_WrByte(0x00BB, 0x3C);
+	*/
 
 	printk("%s:%d: VL6180x: 0x24 %x\n", __func__, __LINE__,VL6180x_RdByte(SYSRANGE_PART_TO_PART_RANGE_OFFSET));
 	
@@ -566,8 +604,7 @@ static int ATD_VL6180x_device_clibration_offset(void)
 		sum += RawRange;
 	}
 	distance = (uint16_t)(sum / STMVL6180_RUNTIMES_OFFSET_CAL);
-	//printk("The measure distanec is %d mm\n", distance);
-	printk("%s:%d: VL6180x: distance %d\n", __func__, __LINE__,distance);
+	printk("The measure distanec is %d mm\n", distance);
 
 	if((VL6180_OFFSET_CAL_RANGE - distance)<0){
 		offset = (VL6180_OFFSET_CAL_RANGE - distance)/3;
@@ -576,22 +613,24 @@ static int ATD_VL6180x_device_clibration_offset(void)
 		offset = (VL6180_OFFSET_CAL_RANGE - distance)/3;
 	}
 
-	printk("%s:%d: VL6180x: offset %d\n", __func__, __LINE__,offset);
-
 	if((distance>=(100+3)||distance<=(100-3)))
 	{	
 		VL6180x_WrByte(SYSRANGE_PART_TO_PART_RANGE_OFFSET, offset);
 
 		/* Write calibration file */
 		vl6180x_t->laser_focus_offset_value = offset;
-		if (Laser_Forcus_sysfs_write_offset(offset) == false)
+		if (Laser_Forcus_sysfs_write_offset(offset) == false){
+			mutex_unlock(&vl6180x_mutex);
 			return -ENOENT;
+		}
 	}
 
 	/* Set calibratioon Setting */
 	/*VL6180x_WrByte(0x097, 0x54);
 	VL6180x_WrByte(0x0A3, 0x28);
-	VL6180x_WrByte(0x0BB, 0x28);*/
+	VL6180x_WrByte(0x0BB, 0x28);
+	*/
+	mutex_unlock(&vl6180x_mutex);
 	
 	return 0;
 }
@@ -603,8 +642,12 @@ static int ATD_VL6180x_device_clibration_crosstalkoffset(void)
 	uint16_t XtalkCompRate;
 	uint16_t rtnRate = 0;
 
-	if (vl6180x_t->device_state == MSM_LASER_FOCUS_DEVICE_OFF) {
+	mutex_lock(&vl6180x_mutex);
+
+	if (vl6180x_t->device_state == MSM_LASER_FOCUS_DEVICE_OFF ||
+		vl6180x_t->device_state == MSM_LASER_FOCUS_DEVICE_DEINIT_CCI) {
 		pr_err("%s:%d Device without turn on: (%d) \n", __func__, __LINE__, vl6180x_t->device_state);
+		mutex_unlock(&vl6180x_mutex);
 		return -EBUSY;
 	}
 
@@ -617,16 +660,12 @@ static int ATD_VL6180x_device_clibration_crosstalkoffset(void)
 		RawRange = ATD_VL6180x_device_read_range();
 		VL6180x_RdDWord(RESULT_RANGE_SIGNAL_RATE, &rtnRate);
 
-		printk("%s:%d: VL6180x: RawRange %d\n", __func__, __LINE__,RawRange);
-		printk("%s:%d: VL6180x: rtnRate %d\n", __func__, __LINE__,(int)rtnRate);
-
 		xtalk_sum += RawRange;
 		xrtn_sum += (int)rtnRate;
 
 		msleep(30);
 	}
 	printk("Crosstalk compensation rate is %d\n", xtalk_sum);
-	printk("%s:%d: VL6180x: xrtn_sum %d\n", __func__, __LINE__,xrtn_sum);
 
 	//XtalkCompRate = (uint16_t)((rtnRate/STMVL6180_RUNTIMES_OFFSET_CAL)/128) * (1000-((xtalk_sum/STMVL6180_RUNTIMES_OFFSET_CAL)*3000/VL6180_CROSSTALK_CAL_RANGE));
 	//XtalkCompRate = XtalkCompRate*128;
@@ -647,8 +686,12 @@ static int ATD_VL6180x_device_clibration_crosstalkoffset(void)
 
 	/* Write calibration file */
 	vl6180x_t->laser_focus_cross_talk_offset_value = XtalkCompRate;
-	if (Laser_Forcus_sysfs_write_cross_talk_offset(XtalkCompRate) == false)
+	if (Laser_Forcus_sysfs_write_cross_talk_offset(XtalkCompRate) == false){
+		mutex_unlock(&vl6180x_mutex);
 		return -ENOENT;
+	}
+
+	mutex_unlock(&vl6180x_mutex);
 
 	return 0;
 }
@@ -716,6 +759,16 @@ static int ATD_VL6180x_I2C_status_check(struct msm_laser_focus_ctrl_t *s_ctrl){
 	if (rc < 0) {
 		//kfree(vl6180x_t);
 		pr_err("%s VL6180x_match_id failed %d\n", __func__, __LINE__);
+		rc = VL6180x_deinit(vl6180x_t);
+		if (rc < 0) {
+			//kfree(vl6180x_t);
+			pr_err("%s VL6180x_deinit failed %d\n", __func__, __LINE__);
+		}
+		rc = VL6180x_power_down(vl6180x_t);
+		if (rc < 0) {
+			//kfree(vl6180x_t);
+			pr_err("%s VL6180x_power_down failed %d\n", __func__, __LINE__);
+		}
 		return 0;
 	}
 	rc = VL6180x_deinit(vl6180x_t);
@@ -730,6 +783,8 @@ static int ATD_VL6180x_I2C_status_check(struct msm_laser_focus_ctrl_t *s_ctrl){
 		pr_err("%s VL6180x_power_down failed %d\n", __func__, __LINE__);
 		return 0;
 	}
+
+	vl6180x_check_status = 1;
 
 	return 1;
 }
@@ -755,21 +810,39 @@ static const struct file_operations ATD_I2C_status_check_fops = {
 	.release = single_release,
 };
 
+static int VL6180x_I2C_status_check_via_prob(struct msm_laser_focus_ctrl_t *s_ctrl){
+	return vl6180x_check_status;
+}
+
+static int VL6180x_I2C_status_check_proc_read(struct seq_file *buf, void *v)
+{
+	ATD_status = VL6180x_I2C_status_check_via_prob(vl6180x_t);
+	
+	seq_printf(buf, "%d\n", ATD_status);
+	return 0;
+}
+
+static int VL6180x_I2C_status_check_proc_open(struct inode *inode, struct  file *file)
+{
+	return single_open(file, VL6180x_I2C_status_check_proc_read, NULL);
+}
+
+static const struct file_operations I2C_status_check_fops = {
+	.owner = THIS_MODULE,
+	.open = VL6180x_I2C_status_check_proc_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static int dump_VL6180x_register_read(struct seq_file *buf, void *v)
 {
 	int status, i = 0;
 	uint16_t register_value = 0;
-	
-	if(vl6180x_t->device_state == MSM_LASER_FOCUS_DEVICE_OFF)
-	{
-		printk("VL6180x device_state is OFF!\n");
-		return 0;
-	}
 
 	for (i = 0; i <0x100; i++)	{
 		register_value = 0;
 		status = VL6180x_RdDWord(i, &register_value);
-		Laser_Forcus_sysfs_write_register_ze550kl(i, register_value);
 	}
 	seq_printf(buf, "%d\n", 0);
 	return 0;
@@ -787,6 +860,51 @@ static const struct file_operations dump_laser_focus_register_fops = {
 	.llseek = seq_lseek,
 	.release = single_release,
 };
+
+static int VL6180x_laser_focus_enforce_read(struct seq_file *buf, void *v)
+{
+	return 0;
+}
+
+static int VL6180x_laser_focus_enforce_open(struct inode *inode, struct  file *file)
+{
+	return single_open(file, VL6180x_laser_focus_enforce_read, NULL);
+}
+
+static ssize_t VL6180x_laser_focus_enforce_write(struct file *filp, const char __user *buff, size_t len, loff_t *data)
+{
+	char messages[8];
+
+	if (vl6180x_t->device_state == MSM_LASER_FOCUS_DEVICE_OFF ||
+		vl6180x_t->device_state == MSM_LASER_FOCUS_DEVICE_DEINIT_CCI) {
+		pr_err("%s:%d Device without turn on: (%d) \n", __func__, __LINE__, vl6180x_t->device_state);
+		return -EBUSY;
+	}
+
+	if (len > 8) {
+		len = 8;
+	}
+
+	if (copy_from_user(messages, buff, len)) {
+		printk("%s commond fail !!\n", __func__);
+		return -EFAULT;
+	}
+	
+	laser_focus_enforce_ctrl = (int)simple_strtol(messages, NULL, 10);
+	
+	return len;
+}
+
+static const struct file_operations laser_focus_enforce_fops = {
+	.owner = THIS_MODULE,
+	.open = VL6180x_laser_focus_enforce_open,
+	.write = VL6180x_laser_focus_enforce_write,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+
 static void VL6180x_create_proc_file(void)
 {
 	status_proc_file = proc_create(STATUS_PROC_FILE, 0776, NULL, &ATD_I2C_status_check_fops);
@@ -822,6 +940,20 @@ static void VL6180x_create_proc_file(void)
 		printk("%s dump_laser_focus_register_file sucessed!\n", __func__);
 	} else {
 		printk("%s dump_laser_focus_register_file failed!\n", __func__);
+	}
+
+	status_proc_file = proc_create(STATUS_PROC_FILE_FOR_CAMERA, 0660, NULL, &I2C_status_check_fops);
+	if (status_proc_file) {
+		printk("%s status_proc_file sucessed!\n", __func__);
+	} else {
+		printk("%s status_proc_file failed!\n", __func__);
+	}
+
+	status_proc_file = proc_create(LASER_FOCUS_ENFORCE, 0660, NULL, &laser_focus_enforce_fops);
+	if (status_proc_file) {
+		printk("%s status_proc_file sucessed!\n", __func__);
+	} else {
+		printk("%s status_proc_file failed!\n", __func__);
 	}
 }
 
@@ -891,6 +1023,81 @@ static int32_t VL6180x_vreg_control(struct msm_laser_focus_ctrl_t *a_ctrl,
 	return rc;
 }
 
+static int VL6180x_GPIO_High(struct msm_laser_focus_ctrl_t *a_ctrl){
+	int rc = 0;
+	
+	struct msm_camera_sensor_board_info *sensordata = NULL;
+	struct msm_camera_power_ctrl_t *power_info = NULL;
+	
+	CDBG("Enter\n");
+
+	if (!a_ctrl) {
+		pr_err("failed\n");
+		return -EINVAL;
+	}
+	
+	sensordata = a_ctrl->sensordata;
+	power_info = &sensordata->power_info;
+
+	if(power_info->gpio_conf->cam_gpiomux_conf_tbl != NULL){
+		pr_err("%s:%d mux install\n", __func__, __LINE__);
+	}
+
+	rc = msm_camera_request_gpio_table(
+		power_info->gpio_conf->cam_gpio_req_tbl,
+		power_info->gpio_conf->cam_gpio_req_tbl_size, 1);
+	if(rc < 0){
+		pr_err("%s: request gpio failed\n", __func__);
+		return rc;
+	}
+
+	gpio_set_value_cansleep(
+		power_info->gpio_conf->gpio_num_info->gpio_num[SENSOR_GPIO_VDIG],
+		GPIO_OUT_HIGH
+	);
+	
+	CDBG("Exit\n");
+	return rc;
+}
+
+static int VL6180x_GPIO_Low(struct msm_laser_focus_ctrl_t *a_ctrl){
+	int rc = 0;
+	
+	struct msm_camera_sensor_board_info *sensordata = NULL;
+	struct msm_camera_power_ctrl_t *power_info = NULL;
+	
+	CDBG("Enter\n");
+
+	if (!a_ctrl) {
+		pr_err("failed\n");
+		return -EINVAL;
+	}
+	
+	sensordata = a_ctrl->sensordata;
+	power_info = &sensordata->power_info;
+
+	if(power_info->gpio_conf->cam_gpiomux_conf_tbl != NULL){
+		pr_err("%s:%d mux install\n", __func__, __LINE__);
+	}
+
+	gpio_set_value_cansleep(
+		power_info->gpio_conf->gpio_num_info->gpio_num[SENSOR_GPIO_VDIG],
+		GPIO_OUT_LOW
+	);
+
+	rc = msm_camera_request_gpio_table(
+		power_info->gpio_conf->cam_gpio_req_tbl,
+		power_info->gpio_conf->cam_gpio_req_tbl_size, 0);
+	if(rc < 0){
+		pr_err("%s: request gpio failed\n", __func__);
+		return rc;
+	}
+	
+	CDBG("Exit\n");
+	return rc;
+}
+
+
 static int32_t VL6180x_power_down(struct msm_laser_focus_ctrl_t *a_ctrl)
 {
 	int32_t rc = 0;
@@ -908,6 +1115,9 @@ static int32_t VL6180x_power_down(struct msm_laser_focus_ctrl_t *a_ctrl)
 		a_ctrl->i2c_tbl_index = 0;
 		a_ctrl->laser_focus_state = LASER_FOCUS_POWER_DOWN;
 	}
+
+	VL6180x_GPIO_Low(a_ctrl);
+	
 	CDBG("Exit\n");
 	return rc;
 }
@@ -975,10 +1185,16 @@ static int32_t msm_laser_focus_get_subdev_id(struct msm_laser_focus_ctrl_t *a_ct
 static int32_t VL6180x_get_dt_data(struct device_node *of_node,
 		struct msm_laser_focus_ctrl_t *fctrl)
 {
+	int i = 0;
 	int32_t rc = 0;
 	struct msm_camera_sensor_board_info *sensordata = NULL;
 	uint32_t id_info[3];
-	struct msm_laser_focus_vreg *vreg_cfg;
+	struct msm_laser_focus_vreg *vreg_cfg = NULL;
+	
+	struct msm_camera_gpio_conf *gconf = NULL;
+	struct msm_camera_power_ctrl_t *power_info = NULL;
+	uint16_t *gpio_array = NULL;
+	uint16_t gpio_array_size = 0;
 
 	CDBG("called\n");
 
@@ -1061,6 +1277,58 @@ static int32_t VL6180x_get_dt_data(struct device_node *of_node,
 		fctrl->sensordata->slave_info->sensor_id_reg_addr,
 		fctrl->sensordata->slave_info->sensor_id);
 
+	/* Handle GPIO (CAM_1V2_EN) */
+	power_info = &sensordata->power_info;
+	
+	power_info->gpio_conf = kzalloc(sizeof(struct msm_camera_gpio_conf), GFP_KERNEL);
+	if(!power_info->gpio_conf){
+		pr_err("%s failed %d\n", __func__, __LINE__);
+		rc = -ENOMEM;
+		return rc;
+	}
+
+	gconf = power_info->gpio_conf;
+	
+	gpio_array_size = of_gpio_count(of_node);
+	CDBG("%s gpio count %d\n", __func__, gpio_array_size);
+
+	if(gpio_array_size){
+		gpio_array = kzalloc(sizeof(uint16_t) * gpio_array_size, GFP_KERNEL);
+		if(!gpio_array){
+			pr_err("%s failed %d\n", __func__, __LINE__);
+			kfree(gconf);
+			rc = -ENOMEM;
+			goto ERROR;
+		}
+		
+		for(i=0; i < gpio_array_size; i++){
+			gpio_array[i] = of_get_gpio(of_node, i);
+			CDBG("%s gpio_array[%d] = %d\n", __func__, i, gpio_array[i]);
+		}
+
+		rc = msm_camera_get_dt_gpio_req_tbl(of_node, gconf, gpio_array, gpio_array_size);
+		if(rc < 0){
+			pr_err("%s failed %d\n", __func__, __LINE__);
+			kfree(gconf);
+			goto ERROR;
+		}
+
+		rc = msm_camera_get_dt_gpio_set_tbl(of_node, gconf, gpio_array, gpio_array_size);
+		if(rc < 0){
+			pr_err("%s failed %d\n", __func__, __LINE__);
+			kfree(gconf->cam_gpio_req_tbl);
+			goto ERROR;
+		}
+
+		rc = msm_camera_init_gpio_pin_tbl(of_node, gconf, gpio_array, gpio_array_size);
+		if(rc < 0){
+			pr_err("%s failed %d\n", __func__, __LINE__);
+			kfree(gconf->cam_gpio_set_tbl);
+			goto ERROR;
+		}
+	}
+	kfree(gpio_array);
+
 	return rc;
 
 ERROR:
@@ -1080,7 +1348,52 @@ static struct msm_camera_i2c_fn_t msm_sensor_cci_func_tbl = {
 	.i2c_poll =  msm_camera_cci_i2c_poll,
 };
 
-static const struct v4l2_subdev_internal_ops msm_laser_focus_internal_ops;
+/*
+static int msm_laser_focus_close(struct v4l2_subdev *sd,
+	struct v4l2_subdev_fh *fh) {
+	int rc = 0;
+	struct msm_laser_focus_ctrl_t *a_ctrl =  v4l2_get_subdevdata(sd);
+	CDBG("Enter\n");
+	if (!a_ctrl) {
+		pr_err("failed\n");
+		return -EINVAL;
+	}
+	if (a_ctrl->act_device_type == MSM_CAMERA_PLATFORM_DEVICE) {
+		rc = a_ctrl->i2c_client->i2c_func_tbl->i2c_util(
+			a_ctrl->i2c_client, MSM_CCI_RELEASE);
+		if (rc < 0)
+			pr_err("cci_init failed\n");
+		
+	}
+
+	CDBG("Exit\n");
+	return rc;
+}
+*/
+
+static const struct v4l2_subdev_internal_ops msm_laser_focus_internal_ops; 
+
+/*
+static long msm_laser_focus_subdev_ioctl(struct v4l2_subdev *sd,
+			unsigned int cmd, void *arg)
+{
+	struct msm_laser_focus_ctrl_t *a_ctrl = v4l2_get_subdevdata(sd);
+	void __user *argp = (void __user *)arg;
+	CDBG("Enter\n");
+	CDBG("%s:%d a_ctrl %p argp %p\n", __func__, __LINE__, a_ctrl, argp);
+	switch (cmd) {
+	case VIDIOC_MSM_SENSOR_GET_SUBDEV_ID:
+		return msm_laser_focus_get_subdev_id(a_ctrl, argp);
+	case VIDIOC_MSM_LASER_FOCUS_CFG:
+		return msm_laser_focus_config(a_ctrl, argp);
+	case MSM_SD_SHUTDOWN:
+		//msm_laser_focus_close(sd, NULL);
+		return 0;
+	default:
+		return -ENOIOCTLCMD;
+	}
+}
+*/
 
 static int32_t VL6180x_power_up(struct msm_laser_focus_ctrl_t *a_ctrl)
 {
@@ -1094,6 +1407,8 @@ static int32_t VL6180x_power_up(struct msm_laser_focus_ctrl_t *a_ctrl)
 	}
 
 	a_ctrl->laser_focus_state = LASER_FOCUS_POWER_UP;
+
+	VL6180x_GPIO_High(a_ctrl);
 
 	CDBG("Exit\n");
 	return rc;
@@ -1203,9 +1518,7 @@ static int32_t VL6180x_platform_probe(struct platform_device *pdev)
 		cci_client->sid = vl6180x_t->sensordata->slave_info->sensor_slave_addr >> 1;
 	cci_client->retries = 3;
 	cci_client->id_map = 0;
-	
-	cci_client->i2c_freq_mode = I2C_FAST_MODE; //sean ++
-	
+	cci_client->i2c_freq_mode = I2C_FAST_MODE;
 	v4l2_subdev_init(&vl6180x_t->msm_sd.sd,
 		vl6180x_t->act_v4l2_subdev_ops);
 	v4l2_set_subdevdata(&vl6180x_t->msm_sd.sd, vl6180x_t);
@@ -1276,6 +1589,7 @@ static int __init VL6180x_init_module(void)
 {
 	int32_t rc = 0;
 	CDBG("Enter\n");
+	mutex_init(&vl6180x_mutex);
 	rc = platform_driver_probe(&msm_laser_focus_platform_driver,
 		VL6180x_platform_probe);
 	CDBG("%s:%d rc %d\n", __func__, __LINE__, rc);
