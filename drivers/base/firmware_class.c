@@ -30,7 +30,7 @@
 #include <linux/io.h>
 
 #include <generated/utsrelease.h>
-#include <soc/qcom/socinfo.h>
+
 #include "base.h"
 
 MODULE_AUTHOR("Manuel Estrada Sainz");
@@ -93,7 +93,8 @@ static int loading_timeout = 60;	/* In seconds */
 
 static inline long firmware_loading_timeout(void)
 {
-	return loading_timeout > 0 ? loading_timeout * HZ : MAX_SCHEDULE_TIMEOUT;
+	return loading_timeout > 0 ? msecs_to_jiffies(loading_timeout * 1000) :
+	        MAX_SCHEDULE_TIMEOUT;
 }
 
 struct firmware_cache {
@@ -293,11 +294,7 @@ static const char * const fw_path[] = {
 	"/lib/firmware/updates",
 	"/lib/firmware/" UTS_RELEASE,
 	"/lib/firmware",
-#ifdef CONFIG_ASUS_ZC550KL_PROJECT
 	// "/firmware/image" // better_ding, wcnss should be loading from /system/etc/firmware with signed firmware
-#else
-	"/firmware/image"
-#endif
 };
 
 /*
@@ -354,35 +351,6 @@ static bool fw_read_file_contents(struct file *file, struct firmware_buf *fw_buf
 	return true;
 }
 
-int modem_fw_path_applied = 0;
-
-static void __apply_volte_modem_fw_path(void) {
-	modem_fw_path_applied = 1;
-
-	if (asus_PRJ_ID != ASUS_ZE550KL && asus_PRJ_ID != ASUS_ZD550KL) {
-		return;
-	}
-
-	if (cpu_is_msm8916()) {
-		strcpy(fw_path_para, "/etc/firmware/8916_volte_modem");
-	} else if (cpu_is_msm8939()) {
-		if (asus_PRJ_ID == ASUS_ZD550KL) {
-			strcpy(fw_path_para, "/etc/firmware/8939_ZD550KL_volte_modem");
-		} else {
-			strcpy(fw_path_para, "/etc/firmware/8939_volte_modem");
-		}
-	} else {
-		printk(KERN_ERR "%s:unknown cpu id\n", __func__);
-	}
-	pr_debug("%s: volte_modem_path=%s\n", __func__, fw_path_para);
-}
-
-static void apply_volte_modem_fw_path(void) {
-	if (modem_fw_path_applied == 0) {
-		__apply_volte_modem_fw_path();
-	}
-}
-
 static bool fw_get_filesystem_firmware(struct device *device,
 				       struct firmware_buf *buf,
 				       phys_addr_t dest_addr, size_t dest_size)
@@ -390,7 +358,7 @@ static bool fw_get_filesystem_firmware(struct device *device,
 	int i;
 	bool success = false;
 	char *path = __getname();
-        apply_volte_modem_fw_path();
+
 	for (i = 0; i < ARRAY_SIZE(fw_path); i++) {
 		struct file *file;
 
@@ -589,8 +557,10 @@ static void fw_dev_release(struct device *dev)
 	module_put(THIS_MODULE);
 }
 
-static int do_firmware_uevent(struct firmware_priv *fw_priv, struct kobj_uevent_env *env)
+static int firmware_uevent(struct device *dev, struct kobj_uevent_env *env)
 {
+	struct firmware_priv *fw_priv = to_firmware_priv(dev);
+
 	if (add_uevent_var(env, "FIRMWARE=%s", fw_priv->buf->fw_id))
 		return -ENOMEM;
 	if (add_uevent_var(env, "TIMEOUT=%i", loading_timeout))
@@ -599,18 +569,6 @@ static int do_firmware_uevent(struct firmware_priv *fw_priv, struct kobj_uevent_
 		return -ENOMEM;
 
 	return 0;
-}
-
-static int firmware_uevent(struct device *dev, struct kobj_uevent_env *env)
-{
-	struct firmware_priv *fw_priv = to_firmware_priv(dev);
-	int err = 0;
-
-	mutex_lock(&fw_lock);
-	if (fw_priv->buf)
-		err = do_firmware_uevent(fw_priv, env);
-	mutex_unlock(&fw_lock);
-	return err;
 }
 
 static struct class firmware_class = {
@@ -1058,8 +1016,9 @@ static int _request_firmware_load(struct firmware_priv *fw_priv, bool uevent,
 	if (uevent) {
 		dev_set_uevent_suppress(f_dev, false);
 		dev_dbg(f_dev, "firmware: requesting %s\n", buf->fw_id);
-		if (timeout != MAX_SCHEDULE_TIMEOUT)
-			schedule_delayed_work(&fw_priv->timeout_work, timeout);
+		//if (timeout != MAX_SCHEDULE_TIMEOUT)
+		//	queue_delayed_work(system_power_efficient_wq,
+		//			   &fw_priv->timeout_work, timeout);
 
 		kobject_uevent(&fw_priv->dev.kobj, KOBJ_ADD);
 	}
@@ -1764,8 +1723,8 @@ static void device_uncache_fw_images_work(struct work_struct *work)
  */
 static void device_uncache_fw_images_delay(unsigned long delay)
 {
-	schedule_delayed_work(&fw_cache.work,
-			msecs_to_jiffies(delay));
+	//queue_delayed_work(system_power_efficient_wq, &fw_cache.work,
+	//		   msecs_to_jiffies(delay));
 }
 
 static int fw_pm_notify(struct notifier_block *notify_block,
