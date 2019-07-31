@@ -70,4 +70,13 @@ config DRM_PANEL_SHARP_LS043T1LE01
 	  Say Y here if you want to enable support for Sharp LS043T1LE01 qHD
 	  (540x960) DSI panel as found on the Qualcomm APQ8074 Dragonboard
 
+config DRM_PANEL_TM_OTM1284A
+	tristate "TM OTM1284A 720p video mode panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Say Y here if you want to enable support for TM OTM1284A 720p
+	  (720x1280) DSI panel as found on the ASUS Zenfone Laser 2 (ZE500KL)
+
 endmenu
